@@ -285,14 +285,20 @@ const SolarCore = (() => {
       }
       // The flow endpoint usually supplies load power, but the documented
       // load endpoint may be the only place with output/load voltage.
-      if (pick("W", raw.flow?.homeLoadPower, raw.flow?.loadOrEpsPower) === null ||
-          pick("V", raw.flow?.loadVoltage, raw.flow?.loadVolt, raw.flow?.loadV) === null) {
+      const needsLoadPower = pick("W", raw.flow?.homeLoadPower, raw.flow?.loadOrEpsPower) === null;
+      const needsLoadVoltage = pick("V", raw.flow?.loadVoltage, raw.flow?.loadVolt, raw.flow?.loadV) === null;
+      if (needsLoadPower || needsLoadVoltage) {
         try {
           const load = await this.get(`/api/v1/inverter/load/${sn}/realtime`, { sn: selection.sn, lan: "en" });
           if (!load || typeof load !== "object" || Array.isArray(load)) throw new Fault("protocol");
           raw.load = load;
         }
-        catch (e) { if (["auth", "interactive", "crypto", "rate", "network"].includes(e.kind)) throw e; failures.push("load"); }
+        catch (e) {
+          if (["auth", "interactive", "crypto", "rate", "network"].includes(e.kind)) throw e;
+          // A missing optional voltage must not make valid flow readings look
+          // stale. Report a partial result only when no load power is available.
+          if (needsLoadPower) failures.push("load");
+        }
       }
       if (!raw.flow && !raw.detail) throw new Fault("protocol");
       return { raw, failures };

@@ -105,6 +105,18 @@ test('load endpoint is read for an explicit output-voltage candidate even when f
   const reading = C.normalize(result.raw, PREF, NOW);
   assert.equal(reading.loadPower, 1600); assert.equal(reading.loadVoltage, 227);
 });
+test('a missing optional load-voltage endpoint leaves voltage unavailable without staling flow power', async () => {
+  const raw = fixture(); delete raw.flow.loadVoltage;
+  const api = client(async req => {
+    if (req.path.includes('/load/')) return { status: 404, json: { code: 404 } };
+    const data = req.path.endsWith('/flow') ? raw.flow : req.path.endsWith('/realtime/input') ? raw.pv :
+      req.path.includes('/battery/') ? raw.battery : req.path.includes('/grid/') ? raw.grid : raw.detail;
+    return ok(data);
+  }, { token });
+  const result = await api.readings(SELECT);
+  assert.deepEqual(result.failures, []);
+  assert.equal(C.normalize(result.raw, PREF, NOW).loadVoltage, null);
+});
 test('read-only allowlist rejects settings, arbitrary hosts, real-time triggers and every other write', () => {
   for (const [method, path] of [['POST','/api/v1/common/setting/S/set'], ['GET','/api/v1/inverter/S/shutdown'],
     ['GET','/api/v1/inverter/S/realTimeUpdateByInv'], ['GET','https://evil.invalid/'], ['DELETE','/api/v1/inverter/S']]) assert.equal(C.allowed(method,path), false);
