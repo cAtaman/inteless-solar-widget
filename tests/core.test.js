@@ -11,7 +11,7 @@ const stamp = new Date(NOW - 120000).toISOString();
 function fixture() {
   return {
     flow: { time: stamp, soc: '73', battV: '52.8', battPower: -600, toBat: true, batTo: false,
-      pvPower: 2400, gridOrMeterPower: -200, gridTo: false, toGrid: true, loadOrEpsPower: 1600 },
+      pvPower: 2400, gridOrMeterPower: -200, gridTo: false, toGrid: true, loadOrEpsPower: 1600, loadVoltage: 228 },
     detail: { time: stamp, etoday: '9.25', status: 1 },
     battery: { time: stamp, soc: 73, voltage: 52.8 },
     pv: { time: stamp, pvIV: [{ vpv: '310' }, { vpv: null }] },
@@ -35,6 +35,7 @@ test('synthetic parsing: units, PV phases and explicit directions override raw s
   assert.equal(r.batteryDirection, 'charging'); assert.equal(r.gridDirection, 'export');
   assert.equal(r.pvInputs[0].value, 310); assert.equal(r.pvInputs[1].value, null);
   assert.equal(r.todayKwh, 9.25); assert.equal(r.gridAvailability, 'voltage present');
+  assert.equal(r.loadVoltage, 228);
   assert.equal(r.sourceAt, NOW - 120000); assert.equal(r.ageUnknown, false);
 });
 test('explicit unit conversion accepts only compatible dimensions', () => {
@@ -46,7 +47,7 @@ test('explicit unit conversion accepts only compatible dimensions', () => {
 test('missing, empty, malformed, boolean and nonfinite readings never become zero', () => {
   for (const value of [null, undefined, '', ' ', '--', 'N/A', true, false, [], {}, NaN, Infinity, '1,000', '52 V']) assert.equal(C.number(value), null);
   const r = C.normalize({}, PREF, NOW);
-  for (const field of ['batterySoc','batteryVoltage','batteryPower','solarPower','gridPower','loadPower','todayKwh']) assert.equal(r[field], null);
+  for (const field of ['batterySoc','batteryVoltage','batteryPower','solarPower','gridPower','loadPower','loadVoltage','todayKwh']) assert.equal(r[field], null);
   assert.equal(r.hasReadings, false); assert.equal(C.valueText(null, ' V'), 'Unavailable');
 });
 test('invalid primary field falls back to valid secondary; genuine zero remains zero', () => {

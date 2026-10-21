@@ -5,7 +5,9 @@
 // Original implementation. Protocol evidence and limitations: docs/RESEARCH.md.
 const SolarCore = (() => {
   const BASE = "https://pv.inteless.com";
-  const POLL_MS = 10 * 60 * 1000;
+  // This asks iOS to refresh after a minute. WidgetKit remains free to defer
+  // execution, so source age is always rendered independently of this hint.
+  const POLL_MS = 60 * 1000;
   const STALE_MS = 15 * 60 * 1000;
   class Fault extends Error {
     constructor(kind, retryAt = 0) { super(kind); this.kind = kind; this.retryAt = retryAt; }
@@ -78,6 +80,7 @@ const SolarCore = (() => {
     const gridPower = pick("W", f.gridOrMeterPower, g.pac);
     const soc = first(f.soc, b.soc);
     const gridVoltages = Array.isArray(g.vip) ? g.vip.map((x, i) => ({ label: `L${i + 1}`, value: quantity(x?.volt, "V") })) : [];
+    const loadVoltage = pick("V", f.loadVoltage, f.loadVolt, f.loadV, l.voltage, l.loadVoltage, l.loadVolt, l.vip?.[0]?.volt);
     const pvRows = Array.isArray(p.pvIV) ? p.pvIV : raw.pvExtra?.pvIV;
     const pvInputs = Array.isArray(pvRows) ? pvRows.map((x, i) => ({ label: `PV${i + 1}`, value: quantity(x?.vpv, "V") })) : [];
     // Preserve source timestamps per endpoint; never replace them with the fetch time.
@@ -107,6 +110,10 @@ const SolarCore = (() => {
       // For multi-load systems the web client uses homeLoadPower for household consumption.
       loadPower: pick("W", bool(f.existsThreeLoad) === true ? f.homeLoadPower : f.loadOrEpsPower, l.pac),
       loadLabel: bool(f.existsThreeLoad) === true ? "Household" : "Load / EPS",
+      // Only explicit, voltage-shaped fields are used. Some accounts expose
+      // no load/output voltage; that remains unavailable rather than inferred
+      // from grid voltage.
+      loadVoltage,
       todayKwh: quantity(d.etoday, "kWh"),
       sourceAt, times, future, ageUnknown, fetchedAt: now,
       offline: number(d.status) === 0 || number(f.status) === 0,
@@ -292,7 +299,7 @@ const SolarCore = (() => {
     try { previous = cache.read(key); } catch (_) { /* A corrupt cache is disposable. */ }
     if (previous?.version !== 1 || previous?.key !== key || !Number.isFinite(previous?.reading?.fetchedAt) || previous.reading.fetchedAt > now ||
         !Array.isArray(previous.reading.pvInputs) || !Array.isArray(previous.reading.gridVoltages) || !previous.reading.times ||
-        !["batterySoc", "batteryVoltage", "batteryPower", "solarPower", "gridPower", "loadPower", "todayKwh"].every(field => previous.reading[field] === null || Number.isFinite(previous.reading[field]))) previous = null;
+        !["batterySoc", "batteryVoltage", "batteryPower", "solarPower", "gridPower", "loadPower", "loadVoltage", "todayKwh"].every(field => previous.reading[field] === null || Number.isFinite(previous.reading[field]))) previous = null;
     let failure = null;
     try { failure = cache.failure?.(key); } catch (_) { /* Metadata is optional. */ }
     if (failure && failure.until > now) return { ...(previous || {}), reading: previous?.reading || null, error: failure.kind, cached: true, retryAt: failure.until };
@@ -616,55 +623,133 @@ const SolarPhone = (() => {
     t.textColor = new Color(color); t.minimumScaleFactor = 0.65;
     return t;
   }
+  const PALETTE = { ink: "0A1115", panel: "142027", hairline: "274047", muted: "9CB4B9", bright: "F1F7F5",
+    solar: "F5BD4B", load: "62D4BB", battery: "AAB9FF", grid: "F48B7A", warning: "F3C66B" };
+  function primaryVoltage(values) { return values.find(x => x.value !== null)?.value ?? null; }
+  function card(parent, label, value, note, accent) {
+    const c = parent.addStack(); c.layoutVertically(); c.backgroundColor = new Color(PALETTE.panel); c.cornerRadius = 11;
+    c.size = new Size(98, 42);
+    c.setPadding(6, 7, 6, 7); text(c, label, 8, PALETTE.muted, true).lineLimit = 1;
+    text(c, value, 15, accent, true).lineLimit = 1;
+    if (note) text(c, note, 8, PALETTE.muted).lineLimit = 1;
+    return c;
+  }
+  function metricGrid(w, r) {
+    const metrics = [
+      ["Battery SOC", SolarCore.valueText(r.batterySoc, "%", 0), SolarCore.valueText(r.batteryVoltage, " V"), PALETTE.battery],
+      ["PV power", SolarCore.powerText(r.solarPower), "Solar generation", PALETTE.solar],
+      [r.loadLabel + " power", SolarCore.powerText(r.loadPower), "Current demand", PALETTE.load],
+      ["Battery power", SolarCore.powerText(r.batteryPower, true), r.batteryDirection, PALETTE.battery],
+      ["Load voltage", SolarCore.valueText(r.loadVoltage, " V"), "Output / load", PALETTE.load],
+      ["Grid voltage", SolarCore.valueText(primaryVoltage(r.gridVoltages), " V"), r.gridAvailability, PALETTE.grid]
+    ];
+    for (let i = 0; i < metrics.length; i += 3) {
+      const row = w.addStack(); row.layoutHorizontally(); row.spacing = 5;
+      for (const m of metrics.slice(i, i + 3)) { card(row, ...m); if (m !== metrics[Math.min(i + 2, metrics.length - 1)]) row.addSpacer(0); }
+    }
+  }
+  function cleanedHistory(value) {
+    if (value?.version !== 1 || !Array.isArray(value.samples)) return [];
+    return value.samples.filter(s => Number.isFinite(s?.at)).map(s => ({ at: s.at,
+      solarPower: SolarCore.number(s.solarPower), loadPower: SolarCore.number(s.loadPower), batteryPower: SolarCore.number(s.batteryPower),
+      gridPower: SolarCore.number(s.gridPower), batterySoc: SolarCore.number(s.batterySoc) })).slice(-90);
+  }
+  function history(cacheStore, selected, state) {
+    const key = "history:" + selected.plantId + ":" + selected.sn;
+    let samples = [];
+    try { samples = cleanedHistory(cacheStore.read(key)); } catch (_) { /* Cache history is optional. */ }
+    const r = state.reading;
+    if (r && !state.cached && !state.throttled && Number.isFinite(r.fetchedAt) && samples[samples.length - 1]?.at !== r.fetchedAt) {
+      samples.push({ at: r.fetchedAt, solarPower: r.solarPower, loadPower: r.loadPower, batteryPower: r.batteryPower,
+        gridPower: r.gridPower, batterySoc: r.batterySoc });
+      samples = samples.slice(-90);
+      try { cacheStore.write(key, { version: 1, samples }); } catch (_) { /* A chart must not break a widget refresh. */ }
+    }
+    return samples;
+  }
+  function chart(samples) {
+    if (typeof DrawContext === "undefined" || typeof Size === "undefined" || samples.length < 2) return null;
+    const width = 620, height = 142, left = 30, right = 9, powerTop = 27, powerBottom = 98, socTop = 112, socBottom = 136;
+    const ctx = new DrawContext(); ctx.size = new Size(width, height); ctx.opaque = false; ctx.respectScreenScale = true;
+    ctx.setFillColor(new Color(PALETTE.panel)); ctx.fillRect(new Rect(0, 0, width, height));
+    ctx.setStrokeColor(new Color(PALETTE.hairline)); ctx.setLineWidth(1);
+    for (const y of [powerTop, (powerTop + powerBottom) / 2, powerBottom, socTop]) { const p = new Path(); p.move(new Point(left, y)); p.addLine(new Point(width - right, y)); ctx.addPath(p); ctx.strokePath(); }
+    const powers = samples.flatMap(s => [s.solarPower, s.loadPower, s.batteryPower, s.gridPower]).filter(Number.isFinite).map(Math.abs);
+    const maxPower = Math.max(100, ...powers), x = i => left + (width - left - right) * i / (samples.length - 1);
+    const draw = (field, color, top, bottom, scale) => {
+      let path = null;
+      samples.forEach((sample, i) => {
+        const v = sample[field];
+        if (!Number.isFinite(v)) { path = null; return; }
+        const y = scale(v, top, bottom);
+        if (!path) { path = new Path(); path.move(new Point(x(i), y)); }
+        else path.addLine(new Point(x(i), y));
+        if (i === samples.length - 1 || !Number.isFinite(samples[i + 1][field])) { ctx.setStrokeColor(new Color(color)); ctx.setLineWidth(2.2); ctx.addPath(path); ctx.strokePath(); path = null; }
+      });
+    };
+    const powerY = v => (powerTop + powerBottom) / 2 - (v / maxPower) * ((powerBottom - powerTop) / 2 - 4);
+    draw("solarPower", PALETTE.solar, powerTop, powerBottom, powerY); draw("loadPower", PALETTE.load, powerTop, powerBottom, powerY);
+    draw("batteryPower", PALETTE.battery, powerTop, powerBottom, powerY); draw("gridPower", PALETTE.grid, powerTop, powerBottom, powerY);
+    draw("batterySoc", PALETTE.bright, socTop, socBottom, v => socBottom - Math.max(0, Math.min(100, v)) / 100 * (socBottom - socTop));
+    ctx.setFont(Font.semiboldSystemFont(10)); ctx.setTextColor(new Color(PALETTE.muted));
+    ctx.drawTextInRect("PV", new Rect(left, 6, 22, 14)); ctx.drawTextInRect("Load", new Rect(left + 35, 6, 34, 14));
+    ctx.setTextColor(new Color(PALETTE.battery)); ctx.drawTextInRect("Batt", new Rect(left + 78, 6, 31, 14));
+    ctx.setTextColor(new Color(PALETTE.grid)); ctx.drawTextInRect("Grid", new Rect(left + 119, 6, 32, 14));
+    ctx.setTextColor(new Color(PALETTE.bright)); ctx.drawTextInRect("SOC", new Rect(left + 160, 6, 28, 14));
+    ctx.setTextColor(new Color(PALETTE.muted)); ctx.setFont(Font.systemFont(9));
+    ctx.drawTextInRect("±" + SolarCore.powerText(maxPower, true), new Rect(width - 75, powerTop - 10, 70, 13));
+    ctx.drawTextInRect("0%", new Rect(2, socBottom - 9, 24, 12)); ctx.drawTextInRect("100%", new Rect(0, socTop - 2, 30, 12));
+    return ctx.getImage();
+  }
+  function freshness(w, r, settings, now, includeChecked) {
+    if (!r.sourceAt) { text(w, "Source time unavailable · AGE UNKNOWN", 9, PALETTE.warning).lineLimit = 1; return; }
+    const row = w.addStack(); row.layoutHorizontally(); row.spacing = 4;
+    text(row, "Source " + clock(r.sourceAt, settings.utcOffsetMinutes, true), 9, PALETTE.muted);
+    text(row, "· Age", 9, PALETTE.muted);
+    const age = row.addDate(new Date(r.sourceAt)); age.applyRelativeStyle(); age.font = Font.systemFont(9); age.textColor = new Color(PALETTE.muted);
+    text(w, r.ageUnknown ? "Some source times missing · age uncertain" : "Stale after " + clock(r.sourceAt + SolarCore.STALE_MS, settings.utcOffsetMinutes), 8, PALETTE.warning).lineLimit = 1;
+    if (includeChecked) text(w, "Checked " + clock(r.fetchedAt, settings.utcOffsetMinutes) + " · iOS may defer the 1 min request", 8, PALETTE.muted).lineLimit = 1;
+  }
   function widget(state, selected, settings, family = "large", now = Date.now()) {
-    const w = new ListWidget(); w.setPadding(14, 14, 12, 14); w.spacing = 3;
-    w.backgroundColor = new Color("101E1A");
+    const w = new ListWidget(); w.setPadding(12, 12, 10, 12); w.spacing = 4;
+    w.backgroundColor = new Color(PALETTE.ink);
     w.refreshAfterDate = new Date(Math.max(now + SolarCore.POLL_MS, state.retryAt || 0));
     w.url = "scriptable:///run?scriptName=" + encodeURIComponent(Script.name());
     const r = state.reading;
-    text(w, state.demo ? "DEMO · SYNTHETIC DATA" : (selected?.name || "INTELESS SOLAR"), 12, "ABC0B5", true).lineLimit = 1;
-    text(w, state.demo ? "DEMO · NOT YOUR INSTALLATION" : SolarCore.status(r, now, state.error, state.cached), 10, "F1C66A", true).lineLimit = 1;
+    const header = w.addStack(); header.layoutHorizontally();
+    text(header, state.demo ? "DEMO" : (selected?.name || "INTELESS SOLAR"), 11, PALETTE.bright, true).lineLimit = 1;
+    header.addSpacer(); text(header, state.demo ? "SYNTHETIC" : SolarCore.status(r, now, state.error, state.cached), 8, state.error || state.cached ? PALETTE.warning : PALETTE.load, true).lineLimit = 1;
+    if (state.demo) text(w, "DEMO · NOT YOUR INSTALLATION", 8, PALETTE.warning, true).lineLimit = 1;
     if (!r) {
       w.addSpacer(6);
-      text(w, "Readings unavailable", 17, "FFFFFF", true);
+      text(w, "Readings unavailable", 17, PALETTE.bright, true);
       text(w, state.setup ? "Run this script in Scriptable to sign in and select a device." : "Tap to open setup / local diagnostics.", 12).lineLimit = 3;
       return w;
     }
-    const today = SolarCore.todayValue(r, now, settings.utcOffsetMinutes);
     if (family === "small") {
-      text(w, SolarCore.powerText(r.solarPower), 26, "A2E7B8", true);
-      text(w, "Solar · Battery " + SolarCore.valueText(r.batterySoc, "%", 0), 11);
-      text(w, "Today " + SolarCore.valueText(today, " kWh", 2), 11);
+      text(w, SolarCore.valueText(r.batterySoc, "%", 0), 31, PALETTE.battery, true);
+      text(w, "Battery SOC · PV " + SolarCore.powerText(r.solarPower), 10, PALETTE.muted);
+      text(w, "Load " + SolarCore.powerText(r.loadPower) + " · Grid " + SolarCore.valueText(primaryVoltage(r.gridVoltages), " V"), 10, PALETTE.muted).lineLimit = 1;
+      freshness(w, r, settings, now, false);
     } else {
-      const row = w.addStack(); row.layoutHorizontally(); row.spacing = 18;
-      const solar = row.addStack(); solar.layoutVertically();
-      text(solar, "SOLAR", 9, "ABC0B5"); text(solar, SolarCore.powerText(r.solarPower), 25, "A2E7B8", true);
-      const battery = row.addStack(); battery.layoutVertically();
-      text(battery, "BATTERY", 9, "ABC0B5"); text(battery, SolarCore.valueText(r.batterySoc, "%", 0), 25, "FFFFFF", true);
-      text(w, `Battery ${SolarCore.valueText(r.batteryVoltage, " V")} · ${SolarCore.powerText(r.batteryPower, true)} ${r.batteryDirection}`, 11).lineLimit = 1;
-      text(w, `Grid ${SolarCore.powerText(r.gridPower, true)} ${r.gridDirection} · ${r.gridAvailability}`, 11).lineLimit = 1;
-      text(w, `${r.loadLabel} ${SolarCore.powerText(r.loadPower)} · Today ${SolarCore.valueText(today, " kWh", 2)}`, 11).lineLimit = 1;
+      metricGrid(w, r);
       if (family === "large") {
-        w.addSpacer(5);
-        text(w, "PV INPUT VOLTAGE", 9, "ABC0B5", true);
-        text(w, voltages(r.pvInputs), 12).lineLimit = 3;
-        text(w, "GRID VOLTAGE", 9, "ABC0B5", true);
-        text(w, voltages(r.gridVoltages), 12).lineLimit = 2;
+        const image = chart(state.history || []);
+        if (image) { const graph = w.addImage(image); graph.imageSize = new Size(310, 72); }
+        else text(w, "Trend chart begins after two on-device refresh samples.", 9, PALETTE.muted).lineLimit = 1;
+        const today = SolarCore.todayValue(r, now, settings.utcOffsetMinutes);
+        text(w, `Grid ${SolarCore.powerText(r.gridPower, true)} ${r.gridDirection} · Today ${SolarCore.valueText(today, " kWh", 2)}`, 8, PALETTE.muted).lineLimit = 1;
+        text(w, "PV inputs " + voltages(r.pvInputs), 8, PALETTE.muted).lineLimit = 2;
       }
+      freshness(w, r, settings, now, family === "large");
     }
-    w.addSpacer();
-    if (r.sourceAt) {
-      text(w, "Cloud time " + clock(r.sourceAt, settings.utcOffsetMinutes, true), 9, "ABC0B5").lineLimit = 1;
-      const row = w.addStack(); row.layoutHorizontally(); row.spacing = 4;
-      text(row, "Age", 9, "ABC0B5");
-      const age = row.addDate(new Date(r.sourceAt)); age.applyRelativeStyle(); age.font = Font.systemFont(9); age.textColor = new Color("ABC0B5");
-      text(w, r.ageUnknown ? "Some source times missing · age uncertain" : "Stale after " + clock(r.sourceAt + SolarCore.STALE_MS, settings.utcOffsetMinutes, true), 9, "F1C66A").lineLimit = 1;
-    } else text(w, "Source time unavailable · AGE UNKNOWN", 9, "F1C66A").lineLimit = 1;
-    if (family === "large") text(w, "Checked " + clock(r.fetchedAt, settings.utcOffsetMinutes) + " · iOS controls refresh", 9, "ABC0B5");
     return w;
   }
   async function getState(settings, selected, force = false) {
-    return SolarCore.refresh({ client: client(), cache: cache(settings.scope), selection: selected, preferences: settings, now: Date.now(), force });
+    const local = cache(settings.scope);
+    const state = await SolarCore.refresh({ client: client(), cache: local, selection: selected, preferences: settings, now: Date.now(), force });
+    state.history = history(local, selected, state);
+    return state;
   }
   async function diagnostics(state, selected, settings) {
     // Local UI, no raw responses, usernames, tokens or serials in this report.
@@ -679,7 +764,7 @@ const SolarPhone = (() => {
         "Battery power: " + SolarCore.powerText(r.batteryPower) + " / " + r.batteryDirection,
         "Solar: " + SolarCore.powerText(r.solarPower), "PV voltage: " + voltages(r.pvInputs),
         "Grid: " + SolarCore.powerText(r.gridPower) + " / " + r.gridDirection + " / " + r.gridAvailability,
-        "Grid voltage: " + voltages(r.gridVoltages), r.loadLabel + ": " + SolarCore.powerText(r.loadPower),
+        "Grid voltage: " + voltages(r.gridVoltages), "Load voltage: " + SolarCore.valueText(r.loadVoltage, " V"), r.loadLabel + ": " + SolarCore.powerText(r.loadPower),
         "Today: " + SolarCore.valueText(SolarCore.todayValue(r, Date.now(), settings.utcOffsetMinutes), " kWh", 2), "",
         "Source timestamp candidates (compare with app):");
       Object.entries(r.times).forEach(([endpoint, t]) => lines.push(`${endpoint}.${t.field}: ${clock(t.ms, settings.utcOffsetMinutes, true)}`));
@@ -777,7 +862,7 @@ const SolarPhone = (() => {
     if (action === 3) await diagnostics(state, selected, settings);
     else await widget(state, selected, settings).presentLarge();
   }
-  return { main, widget, demo, transport, encrypt, selection, clock, voltages, cache, store };
+  return { main, widget, demo, transport, encrypt, selection, clock, voltages, cache, store, history, cleanedHistory, chart };
 })();
 async function runSolarWidget() {
   try { await SolarPhone.main(); }

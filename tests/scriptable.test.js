@@ -12,6 +12,7 @@ function runtime(options = {}) {
     addText(value){const x={value:String(value)};this.items.push(x);return x;}
     addDate(date){const x={date,applyRelativeStyle(){this.relative=true;}};this.items.push(x);return x;}
     addStack(){const x=new Stack();this.items.push(x);return x;}
+    addImage(image){const x={image};this.items.push(x);return x;}
     addSpacer(){} setPadding(){} layoutVertically(){} layoutHorizontally(){}
     async presentLarge(){} async presentMedium(){} async presentSmall(){}
   }
@@ -29,7 +30,9 @@ function runtime(options = {}) {
     remove:p=>{for(const key of files.keys())if(key===p||key.startsWith(p+'/'))files.delete(key);}};
   const env={Keychain:{contains:k=>keys.has(k),get:k=>keys.get(k),set:(k,v)=>keys.set(k,v),remove:k=>keys.delete(k)},
     FileManager:{local:()=>fm},Request,ListWidget:Stack,Color:class{},Font:{systemFont:()=>({}),semiboldSystemFont:()=>({})},
-    Script:{name:()=> 'Inteless Solar'},Device:{model:()=> 'MOCK iPhone',systemVersion:()=> '27.0 MOCK'},
+    Script:{name:()=> 'Inteless Solar'},Device:{model:()=> 'MOCK iPhone',systemVersion:()=> '27.0 MOCK'}, Size:class {constructor(width,height){this.width=width;this.height=height;}},
+    Point:class {constructor(x,y){this.x=x;this.y=y;}}, Rect:class {constructor(x,y,width,height){Object.assign(this,{x,y,width,height});}},
+    Path:class {move(){} addLine(){}}, DrawContext:class {setFillColor(){} fillRect(){} setStrokeColor(){} setLineWidth(){} addPath(){} strokePath(){} setFont(){} setTextColor(){} drawTextInRect(){} getImage(){return {synthetic:true};}},
     Timer:{schedule(ms,repeats,callback){const timer={ms,repeats,invalidated:false,
       invalidate(){this.invalidated=true;},fire(){if(!this.invalidated)callback();}};timers.push(timer);return timer;}},
     WebView:class {
@@ -120,6 +123,14 @@ test('cache files contain only passed normalized envelope; backup restoration an
   r.files.set(filename+'.bak',r.files.get(filename));r.files.delete(filename);
   assert.equal(a.read('plant:sn').reading.sourceAt,456);
   a.removeAll();assert.equal(a.read('plant:sn'),null);
+});
+test('local chart history keeps only normalized samples and never invents points while cached',()=>{
+  const r=runtime(), selected={plantId:'fixture-plant',sn:'fixture-inverter'}, c=r.Phone.cache('account-A');
+  const first=r.Phone.demo(1000);first.demo=false;const samples=r.Phone.history(c,selected,first);
+  assert.equal(samples.length,1);assert.deepEqual(Object.keys(samples[0]).sort(),['at','batteryPower','batterySoc','gridPower','loadPower','solarPower']);
+  const next=r.Phone.demo(2000);next.demo=false;next.reading.solarPower=3300;r.Phone.history(c,selected,next);
+  const cached={...next,cached:true};cached.reading.fetchedAt=3000;assert.equal(r.Phone.history(c,selected,cached).length,2);
+  assert.deepEqual(r.Phone.chart(r.Phone.history(c,selected,next)),{synthetic:true});
 });
 test('widget parameters select only devices previously authorized in local setup',()=>{
   const r=runtime();const selected={plantId:'P',sn:'S'};

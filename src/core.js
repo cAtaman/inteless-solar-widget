@@ -1,7 +1,9 @@
 // Original implementation. Protocol evidence and limitations: docs/RESEARCH.md.
 const SolarCore = (() => {
   const BASE = "https://pv.inteless.com";
-  const POLL_MS = 10 * 60 * 1000;
+  // This asks iOS to refresh after a minute. WidgetKit remains free to defer
+  // execution, so source age is always rendered independently of this hint.
+  const POLL_MS = 60 * 1000;
   const STALE_MS = 15 * 60 * 1000;
   class Fault extends Error {
     constructor(kind, retryAt = 0) { super(kind); this.kind = kind; this.retryAt = retryAt; }
@@ -74,6 +76,7 @@ const SolarCore = (() => {
     const gridPower = pick("W", f.gridOrMeterPower, g.pac);
     const soc = first(f.soc, b.soc);
     const gridVoltages = Array.isArray(g.vip) ? g.vip.map((x, i) => ({ label: `L${i + 1}`, value: quantity(x?.volt, "V") })) : [];
+    const loadVoltage = pick("V", f.loadVoltage, f.loadVolt, f.loadV, l.voltage, l.loadVoltage, l.loadVolt, l.vip?.[0]?.volt);
     const pvRows = Array.isArray(p.pvIV) ? p.pvIV : raw.pvExtra?.pvIV;
     const pvInputs = Array.isArray(pvRows) ? pvRows.map((x, i) => ({ label: `PV${i + 1}`, value: quantity(x?.vpv, "V") })) : [];
     // Preserve source timestamps per endpoint; never replace them with the fetch time.
@@ -103,6 +106,10 @@ const SolarCore = (() => {
       // For multi-load systems the web client uses homeLoadPower for household consumption.
       loadPower: pick("W", bool(f.existsThreeLoad) === true ? f.homeLoadPower : f.loadOrEpsPower, l.pac),
       loadLabel: bool(f.existsThreeLoad) === true ? "Household" : "Load / EPS",
+      // Only explicit, voltage-shaped fields are used. Some accounts expose
+      // no load/output voltage; that remains unavailable rather than inferred
+      // from grid voltage.
+      loadVoltage,
       todayKwh: quantity(d.etoday, "kWh"),
       sourceAt, times, future, ageUnknown, fetchedAt: now,
       offline: number(d.status) === 0 || number(f.status) === 0,
@@ -288,7 +295,7 @@ const SolarCore = (() => {
     try { previous = cache.read(key); } catch (_) { /* A corrupt cache is disposable. */ }
     if (previous?.version !== 1 || previous?.key !== key || !Number.isFinite(previous?.reading?.fetchedAt) || previous.reading.fetchedAt > now ||
         !Array.isArray(previous.reading.pvInputs) || !Array.isArray(previous.reading.gridVoltages) || !previous.reading.times ||
-        !["batterySoc", "batteryVoltage", "batteryPower", "solarPower", "gridPower", "loadPower", "todayKwh"].every(field => previous.reading[field] === null || Number.isFinite(previous.reading[field]))) previous = null;
+        !["batterySoc", "batteryVoltage", "batteryPower", "solarPower", "gridPower", "loadPower", "loadVoltage", "todayKwh"].every(field => previous.reading[field] === null || Number.isFinite(previous.reading[field]))) previous = null;
     let failure = null;
     try { failure = cache.failure?.(key); } catch (_) { /* Metadata is optional. */ }
     if (failure && failure.until > now) return { ...(previous || {}), reading: previous?.reading || null, error: failure.kind, cached: true, retryAt: failure.until };

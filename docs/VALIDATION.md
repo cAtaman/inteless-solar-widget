@@ -4,7 +4,7 @@
 
 ## Automated checks
 
-`npm run check` builds the single-file Scriptable artifact and runs JavaScript plus Python tests. The suite contains **35 JavaScript tests and 11 Python tests**, with all passing on this Mac. Node tests use only synthetic responses and Scriptable API mocks. Python tests make no external account requests. Test RSA private keys are generated temporarily for independent interoperability checks, never committed or used as credentials.
+`npm run check` builds the single-file Scriptable artifact and runs JavaScript plus Python tests. The suite contains **36 JavaScript tests and 11 Python tests**, with all passing on this Mac. Node tests use only synthetic responses and Scriptable API mocks. Python tests make no external account requests. Test RSA private keys are generated temporarily for independent interoperability checks, never committed or used as credentials.
 
 Meaningful coverage:
 
@@ -38,7 +38,7 @@ The owner reported an indefinite spinner after submitting local credentials. The
 
 After the fixes were installed, a direct launch through iPhone Mirroring returned to Scriptable without showing its action sheet. Because foreground error alerts do render on this phone, the short main command menu now uses `Alert.presentAlert()`; paginated plant/inverter choices retain their sheet interface. The capability check verified that command menu on the phone. An initial foreground full sign-in reached HTTP 415; the header fix was made and covered by a Scriptable bridge-style test.
 
-The owner then ran the local Python validator on this Mac and entered credentials only into its hidden prompts. It completed the password grant, plant/inverter selection, and the allowlisted flow, detail, PV, battery and grid reads. The validator reported requested monitoring categories and source-time fields when supplied; it kept identifiers, tokens and raw payloads out of the repository and this record. The phone must still repeat this full sign-in after the synced header fix, then exercise an actual Home Screen widget refresh.
+The owner then ran the local Python validator on this Mac and entered credentials only into its hidden prompts. It completed the password grant, plant/inverter selection, and the allowlisted flow, detail, PV, battery and grid reads. The validator reported requested monitoring categories and source-time fields when supplied; it kept identifiers, tokens and raw payloads out of the repository and this record. The phone then completed the corrected Scriptable sign-in and rendered the widget with the requested account readings in the widgets drawer. This validates a foreground-authenticated render; iOS still controls the timing of subsequent background widget refreshes.
 
 1. Run the a-Shell probes, if desired, then verify **masked input using only nonsecret `test`** before a local account sign-in. Stop on TLS or input-safety errors.
 2. Run the Scriptable foreground capability check, then add a Home Screen widget with parameter `probe`. Verify PASS in the actual background process and that the in-app local validation report can read its recorded result.
