@@ -96,13 +96,15 @@ test('a stalled native request has a watchdog and cannot resume login on late ke
   assert.equal(encryptions,0);assert.equal(r.requests.length,1);assert.equal(r.Phone.store.get('token'),null);
   assert.ok(r.timers.every(t=>t.invalidated));
 });
-test('all widget sizes compactly pair friendly cloud and fetch timestamps with their ages',()=>{
+test('all widget sizes show separate friendly cloud and fetch timestamp lines with ages',()=>{
   const r=runtime();const now=Date.UTC(2026,9,21,12);
   const settings={utcOffsetMinutes:60};const state=r.Phone.demo(now);state.demo=false;state.reading.batteryVoltage=null;
   for(const size of ['small','medium','large']){
     const w=r.Phone.widget(state,{name:'SYNTHETIC INSTALLATION'},settings,size,now);
     const texts=strings(w).join('\n');
     assert.ok(texts.includes('Cloud 21 Oct, 12:58'));assert.ok(texts.includes('Fetch 21 Oct, 13:00'));
+    const directLines=w.items.filter(item=>item?.items).map(line=>line.items.filter(item=>item.value).map(item=>item.value).join(''));
+    assert.ok(directLines.some(line=>line.startsWith('Cloud ')));assert.ok(directLines.some(line=>line.startsWith('Fetch ')));
     assert.equal(w.refreshAfterDate.getTime(),now+r.Core.POLL_MS);
     if(size!=='small')assert.ok(texts.includes('Unavailable'));
   }

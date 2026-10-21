@@ -281,15 +281,16 @@ const SolarPhone = (() => {
     return ctx.getImage();
   }
   function freshness(w, r, settings) {
-    const row = w.addStack(); row.layoutHorizontally(); row.spacing = 2;
+    const cloud = w.addStack(); cloud.layoutHorizontally(); cloud.spacing = 2;
     if (!r.sourceAt) {
-      text(row, "Cloud timestamp unavailable · Fetch " + friendlyClock(r.fetchedAt, settings.utcOffsetMinutes) + " · ", 8, PALETTE.warning).lineLimit = 1;
+      text(cloud, "Cloud timestamp unavailable", 8, PALETTE.warning).lineLimit = 1;
     } else {
-      text(row, "Cloud " + friendlyClock(r.sourceAt, settings.utcOffsetMinutes) + " · ", 8, PALETTE.muted).lineLimit = 1;
-      const sourceAge = row.addDate(new Date(r.sourceAt)); sourceAge.applyRelativeStyle(); sourceAge.font = Font.systemFont(8); sourceAge.textColor = new Color(PALETTE.muted); sourceAge.minimumScaleFactor = 0.5;
-      text(row, " · Fetch " + friendlyClock(r.fetchedAt, settings.utcOffsetMinutes) + " · ", 8, PALETTE.bright).lineLimit = 1;
+      text(cloud, "Cloud " + friendlyClock(r.sourceAt, settings.utcOffsetMinutes) + " · ", 8, PALETTE.muted).lineLimit = 1;
+      const sourceAge = cloud.addDate(new Date(r.sourceAt)); sourceAge.applyRelativeStyle(); sourceAge.font = Font.systemFont(8); sourceAge.textColor = new Color(PALETTE.muted); sourceAge.minimumScaleFactor = 0.5;
     }
-    const fetchedAge = row.addDate(new Date(r.fetchedAt)); fetchedAge.applyRelativeStyle(); fetchedAge.font = Font.systemFont(8); fetchedAge.textColor = new Color(PALETTE.bright); fetchedAge.minimumScaleFactor = 0.5;
+    const fetched = w.addStack(); fetched.layoutHorizontally(); fetched.spacing = 2;
+    text(fetched, "Fetch " + friendlyClock(r.fetchedAt, settings.utcOffsetMinutes) + " · ", 8, PALETTE.bright).lineLimit = 1;
+    const fetchedAge = fetched.addDate(new Date(r.fetchedAt)); fetchedAge.applyRelativeStyle(); fetchedAge.font = Font.systemFont(8); fetchedAge.textColor = new Color(PALETTE.bright); fetchedAge.minimumScaleFactor = 0.5;
   }
   function widget(state, selected, settings, family = "large", now = Date.now()) {
     const w = new ListWidget(); w.setPadding(12, 12, 10, 12); w.spacing = 4;
