@@ -7,6 +7,8 @@ Target: the owner's iPhone 12 / iOS 27. Account and background compatibility mus
 1. Install the official **Scriptable** app by Simon B. Støvring from the App Store.
 2. Transfer **Inteless Solar.js** to the iPhone. Import/open it with Scriptable from Files if offered. Otherwise create a new Scriptable script, paste the complete file contents, and name it **Inteless Solar**.
 3. Run the script in Scriptable. Select **Capability check — no login**. No credentials are needed for this public-key and crypto check.
+
+   If an older version stays spinning, close Scriptable from the App Switcher and reopen it after the updated script syncs. The updated check bounds each network/crypto step and shows a safe **Stopped at** label on failure. Report that label, never your credentials or a raw server response.
 4. Add a **large Scriptable widget** to the Home Screen. Edit it, select **Inteless Solar**, and set its Parameter to **`probe`**. This tests secure crypto, HTTPS, Keychain and cache access in the actual widget process, without logging into an account. A foreground pass alone does not establish background compatibility.
 5. Run the script inside Scriptable and select **Sign in / change account**. Enter your authorized **pv.inteless.com** credentials in the local secure dialog. Credentials and tokens stay in Scriptable Keychain. Never put them in the script or chat.
 6. Choose your plant and inverter. If needed, set **Installation time zone**. The default UTC offset is Lagos **60 minutes**; confirm cloud timestamps against AlpSolarr.

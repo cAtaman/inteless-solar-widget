@@ -410,6 +410,23 @@ const SolarPhone = (() => {
   const PREFIX = "inteless.solar.v1.";
   const DEFAULTS = { utcOffsetMinutes: 60, batteryPositive: "unknown", gridPositive: "unknown" };
   let deadline = Infinity;
+  async function bounded(operation, milliseconds, kind, stage) {
+    const remaining = Math.min(milliseconds, deadline - Date.now());
+    let timer;
+    try {
+      if (remaining <= 0) throw new SolarCore.Fault(kind);
+      const timeout = new Promise((_, reject) => {
+        timer = Timer.schedule(remaining, false, () => reject(new SolarCore.Fault(kind)));
+      });
+      // Attach handlers to the native promise too: a late rejection is consumed,
+      // and a late result cannot continue authentication after our timeout.
+      return await Promise.race([Promise.resolve().then(operation), timeout]);
+    } catch (error) {
+      const fault = error instanceof SolarCore.Fault ? error : new SolarCore.Fault(kind);
+      fault.stage = stage; // Fixed local label only; never native exception text.
+      throw fault;
+    } finally { if (timer) timer.invalidate(); }
+  }
   const store = {
     get(key) { return Keychain.contains(PREFIX + key) ? JSON.parse(Keychain.get(PREFIX + key)) : null; },
     set(key, value) { Keychain.set(PREFIX + key, JSON.stringify(value)); },
@@ -427,7 +444,9 @@ const SolarPhone = (() => {
     request.headers = { Accept: "application/json", "Accept-Language": "en" };
     if (token) request.headers.Authorization = "Bearer " + token;
     if (body !== undefined) { request.headers["Content-Type"] = "application/json"; request.body = JSON.stringify(body); }
-    const content = await request.loadString();
+    const stage = path === "/anonymous/publicKey" ? "Fetching public key" :
+      path === "/oauth/token/new" ? "Cloud sign-in / session renewal" : "Reading cloud monitoring data";
+    const content = await bounded(() => request.loadString(), request.timeoutInterval * 1000, "network", stage);
     if (content.length > 2 * 1024 * 1024) throw new SolarCore.Fault("protocol");
     let json = null;
     try { json = JSON.parse(content); } catch (_) { /* Classify using HTTP status first. */ }
@@ -438,17 +457,23 @@ const SolarPhone = (() => {
     // Fail closed if WKWebView/BigInt/CSPRNG cannot run in the current context.
     try {
       const web = new WebView();
+      // Allow the initial local document to finish loading. A blanket navigation
+      // veto installed before loadHTML can cancel that load without settling it.
+      // This literal document has no resources; CSP blocks network access.
+      await bounded(() => web.loadHTML('<!doctype html><meta http-equiv="Content-Security-Policy" content="default-src \'none\'">'), 5000, "crypto", "Opening local encryption context");
       web.shouldAllowRequest = () => false;
-      await web.loadHTML('<!doctype html><meta http-equiv="Content-Security-Policy" content="default-src \'none\'">');
-      const result = await web.evaluateJavaScript(`(() => {
+      const result = await bounded(() => web.evaluateJavaScript(`(() => {
         try {
           if (typeof BigInt !== "function" || typeof crypto === "undefined" || typeof crypto.getRandomValues !== "function") return null;
           return (${SolarCrypto.rsaEncrypt.toString()})(${JSON.stringify(password)}, ${JSON.stringify(publicKey)}, n => Array.from(crypto.getRandomValues(new Uint8Array(n))));
         } catch (_) { return null; }
-      })()`);
+      })()`), 5000, "crypto", "Encrypting sign-in locally");
       if (typeof result !== "string" || !/^[A-Za-z0-9+/]+=*$/.test(result)) throw new Error("crypto");
       return result;
-    } catch (_) { throw new SolarCore.Fault("crypto"); }
+    } catch (error) {
+      if (error instanceof SolarCore.Fault) throw error;
+      const fault = new SolarCore.Fault("crypto"); fault.stage = "Encrypting sign-in locally"; throw fault;
+    }
   }
   function client() { return new SolarCore.Client({ transport, store, crypto: { md5: SolarCrypto.md5, encrypt } }); }
   function cache(scope) {
@@ -748,6 +773,7 @@ async function runSolarWidget() {
         network: "Network or verified HTTPS failed. Check connectivity and try later.",
         empty: "No plants, devices or supported readings were returned.",
         protocol: "The API response was not recognized. Use the a-Shell local validator to identify the compatibility gap without sharing credentials." })[kind] || "Local setup or storage is unavailable. Unlock the phone, rerun Scriptable and use the capability check. No raw error details are logged.";
+      if (e instanceof SolarCore.Fault && e.stage) a.message += "\n\nStopped at: " + e.stage + ".";
       a.addAction("OK"); await a.presentAlert();
     }
   }

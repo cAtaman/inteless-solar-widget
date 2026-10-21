@@ -6,7 +6,7 @@ const fs = require('node:fs');
 const crypto = require('node:crypto');
 
 function runtime(options = {}) {
-  const keys=new Map(),files=new Map(),requests=[];
+  const keys=new Map(),files=new Map(),requests=[],timers=[],webviews=[];
   class Stack {
     constructor(){this.items=[];}
     addText(value){const x={value:String(value)};this.items.push(x);return x;}
@@ -17,7 +17,7 @@ function runtime(options = {}) {
   }
   class Request {
     constructor(url){this.url=url;requests.push(this);this.response={statusCode:200,headers:{}};}
-    async loadString(){return options.response || '{"code":0,"data":{}}';}
+    async loadString(){return options.loadString ? options.loadString(this) : options.response || '{"code":0,"data":{}}';}
   }
   const fm={libraryDirectory:()=>'/local-library',joinPath:(a,b)=>a+'/'+b,
     fileExists:p=>files.has(p),createDirectory:p=>files.set(p,'DIR'),writeString:(p,s)=>files.set(p,s),
@@ -26,13 +26,25 @@ function runtime(options = {}) {
   const env={Keychain:{contains:k=>keys.has(k),get:k=>keys.get(k),set:(k,v)=>keys.set(k,v),remove:k=>keys.delete(k)},
     FileManager:{local:()=>fm},Request,ListWidget:Stack,Color:class{},Font:{systemFont:()=>({}),semiboldSystemFont:()=>({})},
     Script:{name:()=> 'Inteless Solar'},Device:{model:()=> 'MOCK iPhone',systemVersion:()=> '27.0 MOCK'},
-    WebView:class {async loadHTML(s){assert.ok(!s.includes('<script src'));}async evaluateJavaScript(s){
+    Timer:{schedule(ms,repeats,callback){const timer={ms,repeats,invalidated:false,
+      invalidate(){this.invalidated=true;},fire(){if(!this.invalidated)callback();}};timers.push(timer);return timer;}},
+    WebView:class {
+      constructor(){this.evaluations=0;webviews.push(this);}
+      async loadHTML(s){
+        assert.ok(s.includes("default-src 'none'"));assert.ok(!s.includes('<script src'));
+        // Model the initial navigation that the old unconditional veto blocked.
+        if(this.shouldAllowRequest && !this.shouldAllowRequest({url:'about:blank'}))return new Promise(()=>{});
+        return options.loadHTML ? options.loadHTML() : undefined;
+      }
+      async evaluateJavaScript(s){
+      this.evaluations++;assert.equal(this.shouldAllowRequest({url:'https://example.invalid/'}),false);
+      if(options.evaluateJavaScript)return options.evaluateJavaScript();
       return vm.runInNewContext(s,options.noRandom?{}:{crypto:crypto.webcrypto});
     }} };
   vm.createContext(env);
   for(const name of ['core','crypto','scriptable'])vm.runInContext(fs.readFileSync(`${__dirname}/../src/${name}.js`,'utf8'),env);
   vm.runInContext('this.Phone=SolarPhone;this.Core=SolarCore;',env);
-  return { ...env, keys, files, requests };
+  return { ...env, keys, files, requests, timers, webviews };
 }
 function strings(w){return w.items.flatMap(x=>x instanceof Object && x.items?strings(x):x.value?[x.value]:[]);}
 test('adapter uses verified TLS, rejects redirects, fixed host, headers and JSON',async()=>{
@@ -48,6 +60,33 @@ test('local WebView encryption interoperates with native crypto; no CSPRNG fails
   const decoded=crypto.privateDecrypt({key:privateKey,padding:crypto.constants.RSA_NO_PADDING},Buffer.from(encrypted,'base64'));
   assert.equal(decoded.subarray(decoded.indexOf(0,2)+1).toString(),text);
   await assert.rejects(()=>runtime({noRandom:true}).Phone.encrypt(text,key),e=>e.kind==='crypto');
+  assert.ok(r.timers.every(t=>t.invalidated));
+});
+test('a stuck local WebView load times out without encrypting after a late completion',async()=>{
+  let finishLoad;const r=runtime({loadHTML:()=>new Promise(resolve=>{finishLoad=resolve;})});
+  const pending=r.Phone.encrypt('SYNTHETIC','unused');
+  const rejected=assert.rejects(pending,e=>e.kind==='crypto' && e.stage==='Opening local encryption context');
+  await new Promise(setImmediate);assert.equal(r.timers[0].ms,5000);r.timers[0].fire();await rejected;
+  finishLoad();await new Promise(setImmediate);
+  assert.equal(r.webviews[0].evaluations,0);assert.ok(r.timers.every(t=>t.invalidated));
+});
+test('a stuck WebView evaluation times out and consumes a late native rejection',async()=>{
+  let failEvaluation;const r=runtime({evaluateJavaScript:()=>new Promise((_,reject)=>{failEvaluation=reject;})});
+  const pending=r.Phone.encrypt('SYNTHETIC','unused');
+  const rejected=assert.rejects(pending,e=>e.kind==='crypto' && e.stage==='Encrypting sign-in locally');
+  await new Promise(setImmediate);const timer=r.timers.find(t=>!t.invalidated);assert.equal(timer.ms,5000);
+  timer.fire();await rejected;failEvaluation(new Error('SYNTHETIC PRIVATE NATIVE ERROR'));await new Promise(setImmediate);
+  assert.ok(r.timers.every(t=>t.invalidated));
+});
+test('a stalled native request has a watchdog and cannot resume login on late key arrival',async()=>{
+  let finishRequest,encryptions=0;const r=runtime({loadString:()=>new Promise(resolve=>{finishRequest=resolve;})});
+  r.Phone.store.set('credentials',{username:'SYNTHETIC',password:'SYNTHETIC'});
+  const api=new r.Core.Client({transport:r.Phone.transport,store:r.Phone.store,crypto:{md5:()=>'',encrypt:async()=>{encryptions++;return 'SYNTHETIC';}}});
+  const rejected=assert.rejects(api.authenticate(),e=>e.kind==='network' && e.stage==='Fetching public key');
+  await new Promise(setImmediate);assert.equal(r.timers[0].ms,12000);r.timers[0].fire();await rejected;
+  finishRequest(JSON.stringify({code:0,data:'SYNTHETIC'.repeat(20)}));await new Promise(setImmediate);
+  assert.equal(encryptions,0);assert.equal(r.requests.length,1);assert.equal(r.Phone.store.get('token'),null);
+  assert.ok(r.timers.every(t=>t.invalidated));
 });
 test('all widget sizes include source date/time, age, freshness threshold and real unavailable labels',()=>{
   const r=runtime();const now=Date.UTC(2026,9,21,12);

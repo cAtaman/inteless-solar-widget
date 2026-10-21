@@ -4,7 +4,7 @@
 
 ## Automated checks
 
-`npm run check` builds the single-file Scriptable artifact and runs JavaScript plus Python tests. The initial suite contains **30 JavaScript tests and 10 Python tests**, with all passing on this Mac. Node tests use only synthetic responses and Scriptable API mocks. Python tests make no external account requests. Test RSA private keys are generated temporarily for independent interoperability checks, never committed or used as credentials.
+`npm run check` builds the single-file Scriptable artifact and runs JavaScript plus Python tests. The suite contains **33 JavaScript tests and 10 Python tests**, with all passing on this Mac. Node tests use only synthetic responses and Scriptable API mocks. Python tests make no external account requests. Test RSA private keys are generated temporarily for independent interoperability checks, never committed or used as credentials.
 
 Meaningful coverage:
 
@@ -18,6 +18,7 @@ Meaningful coverage:
 - Read-only route allowlists rejecting settings, shutdown, update-trigger and arbitrary write paths.
 - MD5 helper compared with Node native crypto; RSAES-PKCS1-v1_5 public encryption for **2048 and 4096 bits**, Unicode input, nonzero randomized padding, ciphertext variability and fail-closed random errors, independently checked with Node native RSA and Python/OpenSSL.
 - Local WebView encryption executed in an isolated JavaScript VM with a native CSPRNG; absent CSPRNG fails closed. This is **not** WKWebView or iOS validation.
+- Initial local WebView navigation is allowed before installing its navigation veto. Mocked stuck document loads, JavaScript evaluations and native network requests hit independent watchdogs, invalidate their timers, and report fixed stage labels. Late results cannot resume authentication; late native rejections are consumed. Timers and navigation callbacks in these tests are mocks.
 - Widget construction through mocks for small/medium/large sizes: source date/time, dynamic-age element, stale deadline, unavailable labels, demo marking and device-parameter validation. This is **not** visual QA on a phone.
 - Python verified TLS context even when the host's default context factory is replaced with an unverified one; fatal masked-input fallback; no password/token CLI arguments or disk persistence; fixed safe errors and selected-value output instead of raw payload dumps.
 
@@ -30,6 +31,8 @@ The anonymous HTTPS public-key service responded successfully during source rese
 ## Owner's local acceptance checks
 
 Installation smoke check observed through iPhone Mirroring: the official Scriptable app opened, `Inteless Solar.js` synced from its existing iCloud folder, and the script displayed its local action menu. The cloud sign-in dialog was opened for owner-only credential entry. No credentials or phone screenshots are recorded in this repository. Foreground crypto success, account data and the background probe remain unconfirmed at this stage.
+
+The owner reported an indefinite spinner after submitting local credentials. The original no-login capability check also stayed spinning when run through Mirroring. The original encryption helper installed an unconditional navigation veto before loading its blank local document; this is a suspected cause, not yet an independently confirmed WKWebView diagnosis. The update lets that resource-free, CSP-restricted document load first and adds watchdogs (12 seconds per network request, 5 seconds per WebView operation, each capped by the widget deadline). It displays the fixed operation stage on foreground failure. The rebuilt script was copied to the existing Scriptable iCloud location with exact byte verification. Phone acceptance of this fix is pending; no account login was retried by the agent.
 
 1. Run the a-Shell probes, if desired, then verify **masked input using only nonsecret `test`** before a local account sign-in. Stop on TLS or input-safety errors.
 2. Run the Scriptable foreground capability check, then add a Home Screen widget with parameter `probe`. Verify PASS in the actual background process and that the in-app local validation report can read its recorded result.
