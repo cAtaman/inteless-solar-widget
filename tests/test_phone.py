@@ -49,6 +49,13 @@ class PhoneTests(unittest.TestCase):
             api.call("POST", "/api/v1/common/setting/S/set")
         opener.open.assert_not_called()
 
+    def test_token_post_uses_the_current_json_media_type(self):
+        opener = mock.Mock()
+        opener.open.return_value = Response({"code": 0, "data": {}})
+        V.API(opener).call("POST", "/oauth/token/new", body={}, authenticated=False)
+        request = opener.open.call_args.args[0]
+        self.assertEqual(request.get_header("Content-type"), "application/json;charset=UTF-8")
+
     def test_auth_interactive_rate_limit_and_redirect_are_safe(self):
         for code in (101, 102, 113, 114):
             opener = mock.Mock()

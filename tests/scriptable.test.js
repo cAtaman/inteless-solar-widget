@@ -16,7 +16,11 @@ function runtime(options = {}) {
     async presentLarge(){} async presentMedium(){} async presentSmall(){}
   }
   class Request {
-    constructor(url){this.url=url;requests.push(this);this.response={statusCode:200,headers:{}};}
+    constructor(url){this.url=url;this._headers={};requests.push(this);this.response={statusCode:200,headers:{}};}
+    // Mirror the bridge behavior that makes `request.headers.Foo = ...`
+    // unreliable after assigning `headers`.
+    set headers(value){this._headers={...value};}
+    get headers(){return {...this._headers};}
     async loadString(){return options.loadString ? options.loadString(this) : options.response || '{"code":0,"data":{}}';}
   }
   const fm={libraryDirectory:()=>'/local-library',joinPath:(a,b)=>a+'/'+b,
@@ -51,7 +55,8 @@ test('adapter uses verified TLS, rejects redirects, fixed host, headers and JSON
   const r=runtime();await r.Phone.transport({method:'POST',path:'/oauth/token/new',params:{},body:{password:'SYNTHETIC-ENCRYPTED'},token:undefined});
   const req=r.requests[0];assert.equal(req.allowInsecureRequest,false);assert.equal(req.onRedirect(),null);
   assert.equal(req.url,'https://pv.inteless.com/oauth/token/new');assert.equal(req.timeoutInterval,12);
-  assert.equal(req.headers['Content-Type'],'application/json');
+  assert.equal(req.headers['Content-Type'],'application/json;charset=UTF-8');
+  assert.equal(req.headers.Accept,'application/json');
 });
 test('local WebView encryption interoperates with native crypto; no CSPRNG fails closed',async()=>{
   const r=runtime();const {publicKey,privateKey}=crypto.generateKeyPairSync('rsa',{modulusLength:2048});

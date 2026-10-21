@@ -454,9 +454,14 @@ const SolarPhone = (() => {
     request.timeoutInterval = Math.min(12, remaining);
     request.allowInsecureRequest = false;
     request.onRedirect = () => null;
-    request.headers = { Accept: "application/json", "Accept-Language": "en" };
-    if (token) request.headers.Authorization = "Bearer " + token;
-    if (body !== undefined) { request.headers["Content-Type"] = "application/json"; request.body = JSON.stringify(body); }
+    // Compose the dictionary before assigning it. Scriptable bridges this
+    // property to NSURLRequest; mutating the object returned by its getter is
+    // not a reliable way to add a Content-Type or Authorization header.
+    const headers = { Accept: "application/json", "Accept-Language": "en" };
+    if (token) headers.Authorization = "Bearer " + token;
+    if (body !== undefined) headers["Content-Type"] = "application/json;charset=UTF-8";
+    request.headers = headers;
+    if (body !== undefined) request.body = JSON.stringify(body);
     const stage = path === "/anonymous/publicKey" ? "Fetching public key" :
       path === "/oauth/token/new" ? "Cloud sign-in / session renewal" : "Reading cloud monitoring data";
     const content = await bounded(() => request.loadString(), request.timeoutInterval * 1000, "network", stage);

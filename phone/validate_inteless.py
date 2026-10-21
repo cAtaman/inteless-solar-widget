@@ -153,7 +153,9 @@ class API:
         data = None
         if body is not None:
             data = json.dumps(body).encode("utf-8")
-            headers["Content-Type"] = "application/json"
+            # Matches the current Inteless web client. Some gateways reject a
+            # POST whose JSON media type lacks its declared UTF-8 charset.
+            headers["Content-Type"] = "application/json;charset=UTF-8"
         req = urllib.request.Request(url, data=data, headers=headers, method=method)
         self.calls += 1
         try:
