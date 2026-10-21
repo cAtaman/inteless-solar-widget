@@ -524,7 +524,7 @@ const SolarPhone = (() => {
   async function message(title, body) {
     const a = new Alert(); a.title = title; a.message = body; a.addAction("OK"); await a.presentAlert();
   }
-  async function choose(title, labels) {
+  async function choose(title, labels, alertStyle = false) {
     if (!labels.length) throw new SolarCore.Fault("empty");
     // Paginate local menus too: keep large accounts usable on a phone.
     let page = 0;
@@ -536,7 +536,10 @@ const SolarPhone = (() => {
       if (next) a.addAction("Next page");
       if (page > 0) a.addAction("Previous page");
       a.addCancelAction("Cancel");
-      const i = await a.presentSheet();
+      // Scriptable's native alerts have continued to render on this phone while
+      // its action sheets dismiss immediately. Use an alert only for the short
+      // main command menu; long plant/inverter lists remain paginated sheets.
+      const i = await (alertStyle ? a.presentAlert() : a.presentSheet());
       if (i < 0) return -1;
       if (i < rows.length) return page * 12 + i;
       if (next && i === rows.length) page++; else page--;
@@ -737,7 +740,7 @@ const SolarPhone = (() => {
       Script.setWidget(widget(state, selected, settings || DEFAULTS, config.widgetFamily)); return;
     }
     const actions = ["Refresh and preview large", "Sign in / change account", "Select plant / inverter", "Local validation report", "Installation time zone", "Capability check — no login", "Preview DEMO", "Forget account and cached data", "Test one refresh-token grant", "Test full sign-in again"];
-    const action = await choose("Inteless Solar · 2026.10.21.2", actions);
+    const action = await choose("Inteless Solar · 2026.10.21.3", actions, true);
     if (action < 0) return;
     if (action === 6) { await widget(demo(Date.now()), null, DEFAULTS).presentLarge(); return; }
     if (action === 5) { await capability(); return; }
