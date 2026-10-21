@@ -75,7 +75,7 @@ The parameter **`demo`** previews clearly labeled synthetic readings, with no lo
 
 ## Mac-assisted transfer
 
-A USB cable can enable Finder File Sharing for apps that expose it; it is not a generic iPhone shell or app installer. This Mac currently has no Xcode `devicectl`. Finder showed a connected iPhone; an app's file-sharing container has not been verified. iPhone Mirroring is installed but was at first-run onboarding when inspected. The owner must complete required device trust/authentication and any mirroring-access setup. Existing account credentials should be entered on the phone, not supplied to this chat. No successful phone installation is claimed yet.
+A USB cable can enable Finder File Sharing for apps that expose it; it is not a generic iPhone shell or app installer. This Mac currently has no Xcode `devicectl`. Finder showed a connected iPhone; an app's file-sharing container has not been verified. iPhone Mirroring is now configured and was used to reach the official Scriptable download confirmation; installation/import and widget execution have not yet been verified. The owner completes required device/Apple authentication locally. Existing cloud credentials should be entered on the phone, not supplied to this chat.
 
 ## Develop and verify on the Mac
 
@@ -86,6 +86,6 @@ npm run check
 python3 scripts/package.py
 ```
 
-The package command creates `dist/IntelessSolar-iPhone.zip` with the two standalone phone files, these instructions, research, validation notes and a SHA-256 manifest. It never includes `.env`, credentials, captures, editor files, or local caches. Source edits go in `src/`; regenerate the committed Scriptable file using `npm run build`.
+The package command creates **`dist/IntelessSolar-Widget.zip`**, containing only the JavaScript widget, its concise setup guide, API/validation notes, license and SHA-256 manifest. The optional Python diagnostic is a **separate** `dist/validate_inteless.py`; it is not part of the widget installation. Neither delivery includes `.env`, credentials, captures, editor files, or local caches. Source edits go in `src/`; regenerate the committed Scriptable file using `npm run build`.
 
 Read [API evidence and licenses](docs/RESEARCH.md), [tests and pending device checks](docs/VALIDATION.md), and the [platform comparison](reports/iPhone%20solar%20widget%20platform%20decision.md). No official public API stability contract or quota was found.

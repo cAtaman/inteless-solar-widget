@@ -5,18 +5,16 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 FILES = {
-    "scriptable/Inteless Solar.js": "scriptable/Inteless Solar.js",
-    "phone/validate_inteless.py": "phone/validate_inteless.py",
-    "README.md": "README.md",
+    "Inteless Solar.js": "scriptable/Inteless Solar.js",
+    "README.md": "docs/SCRIPTABLE_SETUP.md",
     "docs/RESEARCH.md": "docs/RESEARCH.md",
     "docs/VALIDATION.md": "docs/VALIDATION.md",
     "LICENSE": "LICENSE",
-    "reports/iPhone solar widget platform decision.md": "reports/iPhone solar widget platform decision.md",
 }
 
 
 def package():
-    target = ROOT / "dist" / "IntelessSolar-iPhone.zip"
+    target = ROOT / "dist" / "IntelessSolar-Widget.zip"
     target.parent.mkdir(exist_ok=True)
     manifest = []
     with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as archive:
@@ -26,6 +24,10 @@ def package():
             manifest.append(hashlib.sha256(data).hexdigest() + "  " + name)
         archive.writestr("SHA256SUMS.txt", "\n".join(manifest) + "\n")
     print("Packaged " + str(target))
+    # Separate optional diagnostic, never a dependency in the widget archive.
+    diagnostic = target.parent / "validate_inteless.py"
+    diagnostic.write_bytes((ROOT / "phone" / "validate_inteless.py").read_bytes())
+    print("Optional a-Shell diagnostic: " + str(diagnostic))
 
 
 if __name__ == "__main__":
