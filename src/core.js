@@ -44,6 +44,8 @@ const SolarCore = (() => {
       return utc - offsetMinutes * 60000;
     }
     if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(s)) return null;
+    // Date.parse normalizes some impossible dates (e.g. February 30).
+    if (timestamp(s.slice(0, 19), 0) === null) return null;
     const ms = Date.parse(s); return Number.isFinite(ms) ? ms : null;
   }
   function sourceTime(data, offset) {

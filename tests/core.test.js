@@ -66,6 +66,8 @@ test('source timestamps support seconds, milliseconds, zones and installation of
   assert.equal(C.timestamp('2026-10-21 13:00:00', 60), NOW);
   assert.equal(C.timestamp('2026-10-21T13:00:00+01:00'), NOW);
   assert.equal(C.timestamp('2026-02-30 00:00:00'), null);
+  assert.equal(C.timestamp('2026-02-30T00:00:00Z'), null);
+  assert.equal(C.timestamp('2026-10-21T24:00:00+01:00'), null);
   assert.equal(C.timestamp('2026-10-21 24:00:00'), null);
   assert.equal(C.timestamp('2026-10-21'), null);
 });
