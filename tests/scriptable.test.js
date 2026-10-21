@@ -30,8 +30,8 @@ function runtime(options = {}) {
     readString:p=>files.get(p),copy:(a,b)=>files.set(b,files.get(a)),move:(a,b)=>{files.set(b,files.get(a));files.delete(a);},
     remove:p=>{for(const key of files.keys())if(key===p||key.startsWith(p+'/'))files.delete(key);}};
   const env={Keychain:{contains:k=>keys.has(k),get:k=>keys.get(k),set:(k,v)=>keys.set(k,v),remove:k=>keys.delete(k)},
-    FileManager:{local:()=>fm},Request,ListWidget:Stack,Color:class{},Font:{systemFont:()=>({}),semiboldSystemFont:()=>({})},
-    Script:{name:()=> 'Inteless Solar'},Device:{model:()=> 'MOCK iPhone',systemVersion:()=> '27.0 MOCK'}, Size:class {constructor(width,height){this.width=width;this.height=height;}},
+    FileManager:{local:()=>fm},Request,ListWidget:Stack,Color:class {constructor(value){this.value=value;}},Font:{systemFont:()=>({}),semiboldSystemFont:()=>({})},
+    Script:{name:()=> 'Inteless Solar'},Device:{model:()=> 'MOCK iPhone',systemVersion:()=> '27.0 MOCK',isUsingDarkAppearance:()=>options.dark !== false}, Size:class {constructor(width,height){this.width=width;this.height=height;}},
     Point:class {constructor(x,y){this.x=x;this.y=y;}}, Rect:class {constructor(x,y,width,height){Object.assign(this,{x,y,width,height});}},
     Path:class {move(){} addLine(){}}, DrawContext:class {setFillColor(){} fillRect(){} setStrokeColor(){} setLineWidth(){} addPath(){} strokePath(){} setFont(){} setTextColor(){} drawTextInRect(){} getImage(){return {synthetic:true};}},
     Timer:{schedule(ms,repeats,callback){const timer={ms,repeats,invalidated:false,
@@ -124,12 +124,21 @@ test('widget header uses the plant name and never exposes a saved inverter alias
   const texts=strings(w).join(' ');
   assert.ok(texts.includes('SYNTHETIC PLANT'));assert.ok(!texts.includes('SYNTHETIC-INVERTER-ID'));
 });
+test('widget follows the iPhone appearance with legible dark and light palettes',()=>{
+  const now=Date.UTC(2026,9,21,12);
+  for(const [dark,ink,panel] of [[true,'0A1115','142027'],[false,'F4F7F5','E6EEEB']]){
+    const r=runtime({dark}), state=r.Phone.demo(now);state.demo=false;
+    const w=r.Phone.widget(state,{plantName:'SYNTHETIC PLANT'}, {utcOffsetMinutes:60}, 'medium', now);
+    assert.equal(w.backgroundColor.value,ink);assert.equal(w.items[1].items[0].backgroundColor.value,panel);
+  }
+});
 test('large widget balances its expanded metric grid and trend chart heights',()=>{
   const r=runtime(), now=Date.UTC(2026,9,21,12), state=r.Phone.demo(now);state.demo=false;
   state.history=[{at:now-60000,solarPower:500,loadPower:400,batteryPower:-100,gridPower:0,batterySoc:90},{at:now,solarPower:600,loadPower:450,batteryPower:-120,gridPower:0,batterySoc:89}];
   const w=r.Phone.widget(state,{plantName:'SYNTHETIC PLANT'}, {utcOffsetMinutes:60}, 'large', now);
   assert.equal(w.items[1].items[0].size.height,64);
-  assert.equal(w.items.find(item=>item.image)?.imageSize.height,135);
+  const graph=w.items.find(item=>item.image)?.imageSize;
+  assert.equal(graph.height,135);assert.equal(graph.width,310);
 });
 test('demo always visibly marked; no-source timestamp never uses fetch time as source',()=>{
   const r=runtime();const state=r.Phone.demo(Date.now());

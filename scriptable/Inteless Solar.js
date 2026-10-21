@@ -1,9 +1,9 @@
 // Variables used by Scriptable.
 // icon-color: deep-green; icon-glyph: solar-panel;
 // Inteless Solar — install this single file in Scriptable.
-// Version: 1.1.2
+// Version: 1.1.3
 // Credentials are entered locally and stored in Scriptable Keychain.
-const SOLAR_WIDGET_VERSION = "1.1.2";
+const SOLAR_WIDGET_VERSION = "1.1.3";
 // Original implementation. Protocol evidence and limitations: docs/RESEARCH.md.
 const SolarCore = (() => {
   const BASE = "https://pv.inteless.com";
@@ -649,14 +649,21 @@ const SolarPhone = (() => {
       grid: { time, vip: [{ volt: 229 }] }
     }, DEFAULTS, now) };
   }
-  function text(parent, value, size, color = "E7EEE9", weight = false) {
+  const PALETTE = (() => {
+    const dark = typeof Device.isUsingDarkAppearance !== "function" || Device.isUsingDarkAppearance();
+    // Solar colours retain their meaning in both appearances; only the neutral
+    // surfaces and contrast values switch with the system appearance.
+    return dark ? { ink: "0A1115", panel: "142027", hairline: "274047", muted: "9CB4B9", bright: "F1F7F5",
+      solar: "F5BD4B", load: "62D4BB", battery: "AAB9FF", grid: "F48B7A", warning: "F3C66B" } :
+      { ink: "F4F7F5", panel: "E6EEEB", hairline: "C7D5D1", muted: "506A6C", bright: "132227",
+        solar: "A66700", load: "007B68", battery: "5166C7", grid: "B34334", warning: "8A5A00" };
+  })();
+  function text(parent, value, size, color = PALETTE.bright, weight = false) {
     const t = parent.addText(String(value));
     t.font = weight ? Font.semiboldSystemFont(size) : Font.systemFont(size);
     t.textColor = new Color(color); t.minimumScaleFactor = 0.65;
     return t;
   }
-  const PALETTE = { ink: "0A1115", panel: "142027", hairline: "274047", muted: "9CB4B9", bright: "F1F7F5",
-    solar: "F5BD4B", load: "62D4BB", battery: "AAB9FF", grid: "F48B7A", warning: "F3C66B" };
   function primaryVoltage(values) { return values.find(x => x.value !== null)?.value ?? null; }
   function card(parent, label, value, note, accent, height = 42) {
     const c = parent.addStack(); c.layoutVertically(); c.backgroundColor = new Color(PALETTE.panel); c.cornerRadius = 11;
@@ -701,7 +708,9 @@ const SolarPhone = (() => {
   }
   function chart(samples) {
     if (typeof DrawContext === "undefined" || typeof Size === "undefined" || samples.length < 2) return null;
-    const width = 620, height = 310, left = 30, right = 42, powerTop = 44, powerBottom = 292;
+    // The 620×270 canvas matches the rendered 310×135 frame exactly, so the
+    // chart shares the metric grid's left and right edges without distortion.
+    const width = 620, height = 270, left = 30, right = 42, powerTop = 39, powerBottom = 254;
     const ctx = new DrawContext(); ctx.size = new Size(width, height); ctx.opaque = false; ctx.respectScreenScale = true;
     ctx.setFillColor(new Color(PALETTE.panel)); ctx.fillRect(new Rect(0, 0, width, height));
     ctx.setStrokeColor(new Color(PALETTE.hairline)); ctx.setLineWidth(1);
@@ -726,10 +735,10 @@ const SolarPhone = (() => {
     // right-hand scale so its percentage is never interpreted as watts.
     draw("batterySoc", PALETTE.bright, powerTop, powerBottom, v => powerBottom - Math.max(0, Math.min(100, v)) / 100 * (powerBottom - powerTop));
     ctx.setFont(Font.semiboldSystemFont(10)); ctx.setTextColor(new Color(PALETTE.muted));
-    ctx.drawTextInRect("PV", new Rect(left, 10, 22, 14)); ctx.drawTextInRect("Load", new Rect(left + 35, 10, 34, 14));
-    ctx.setTextColor(new Color(PALETTE.battery)); ctx.drawTextInRect("Batt", new Rect(left + 78, 10, 31, 14));
-    ctx.setTextColor(new Color(PALETTE.grid)); ctx.drawTextInRect("Grid", new Rect(left + 119, 10, 32, 14));
-    ctx.setTextColor(new Color(PALETTE.bright)); ctx.drawTextInRect("SOC", new Rect(left + 160, 10, 28, 14));
+    ctx.drawTextInRect("PV", new Rect(left, 8, 22, 14)); ctx.drawTextInRect("Load", new Rect(left + 35, 8, 34, 14));
+    ctx.setTextColor(new Color(PALETTE.battery)); ctx.drawTextInRect("Batt", new Rect(left + 78, 8, 31, 14));
+    ctx.setTextColor(new Color(PALETTE.grid)); ctx.drawTextInRect("Grid", new Rect(left + 119, 8, 32, 14));
+    ctx.setTextColor(new Color(PALETTE.bright)); ctx.drawTextInRect("SOC", new Rect(left + 160, 8, 28, 14));
     ctx.setTextColor(new Color(PALETTE.muted)); ctx.setFont(Font.systemFont(9));
     ctx.drawTextInRect("±" + SolarCore.powerText(maxPower, true), new Rect(width - right - 70, powerTop - 10, 70, 13));
     ctx.drawTextInRect("100%", new Rect(width - 39, powerTop - 2, 38, 12)); ctx.drawTextInRect("0%", new Rect(width - 28, powerBottom - 9, 27, 12));
@@ -833,8 +842,8 @@ const SolarPhone = (() => {
     await message("Foreground capability check passed", `iOS ${Device.systemVersion()}: HTTPS/public key, BigInt, secure randomness and RSA encryption ran here. No account login occurred. The Home Screen widget still needs its own check.`);
   }
   async function backgroundProbe() {
-    const w = new ListWidget(); w.backgroundColor = new Color("101E1A"); w.setPadding(14, 14, 14, 14);
-    text(w, "NO-LOGIN BACKGROUND CHECK", 12, "F1C66A", true);
+    const w = new ListWidget(); w.backgroundColor = new Color(PALETTE.ink); w.setPadding(14, 14, 14, 14);
+    text(w, "NO-LOGIN BACKGROUND CHECK", 12, PALETTE.warning, true);
     let ok = false;
     try {
       const nonce = Date.now();
@@ -849,10 +858,10 @@ const SolarPhone = (() => {
       c.removeAll(); ok = true;
     } catch (_) { /* No raw error details in widget. */ }
     try { store.set("backgroundProbe", { at: Date.now(), ok }); } catch (_) { ok = false; }
-    text(w, ok ? "PASS" : "FAIL / RETRY LATER", 22, "FFFFFF", true);
+    text(w, ok ? "PASS" : "FAIL / RETRY LATER", 22, PALETTE.bright, true);
     text(w, "iOS " + Device.systemVersion(), 12);
     text(w, ok ? "HTTPS, RSA, secure random, Keychain and file roundtrip ran here." : "Open Scriptable for foreground check. Network, storage or background crypto unavailable.", 12).lineLimit = 4;
-    text(w, "Account login NOT tested.", 10, "F1C66A");
+    text(w, "Account login NOT tested.", 10, PALETTE.warning);
     w.refreshAfterDate = new Date(Date.now() + 3600000);
     return w;
   }
