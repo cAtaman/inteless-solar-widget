@@ -194,6 +194,14 @@ test('cloud errors retain only numeric status/code and data type for local diagn
     });
   }
 });
+test('valid cloud envelope remains usable when a Scriptable-like transport omits status metadata',async()=>{
+  const api=new C.Client({store:{get:()=>null},transport:async()=>({status:0,json:{code:0,success:true,data:'SYNTHETIC-PUBLIC-KEY'}})});
+  assert.equal(await api.request('GET','/anonymous/publicKey'),'SYNTHETIC-PUBLIC-KEY');
+  const rejected=new C.Client({store:{get:()=>null},transport:async()=>({status:0,json:{code:0,success:true,data:null}})});
+  await assert.rejects(rejected.request('GET','/anonymous/publicKey'),e=>e.kind==='protocol');
+  const failedStatus=new C.Client({store:{get:()=>null},transport:async()=>({status:503,json:{code:0,success:true,data:'SYNTHETIC'}})});
+  await assert.rejects(failedStatus.request('GET','/anonymous/publicKey'),e=>e.kind==='network'&&e.http===503);
+});
 for(const bits of [2048,4096])test(`RSA ${bits} encryption independently decodes via native crypto`,()=>{
   const {publicKey,privateKey}=crypto.generateKeyPairSync('rsa',{modulusLength:bits});
   const key=publicKey.export({type:'spki',format:'pem'});

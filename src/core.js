@@ -146,22 +146,27 @@ const SolarCore = (() => {
       catch (e) { if (e instanceof Fault) throw e; throw new Fault("network"); }
       const { status: http, json, headers = {} } = response;
       const code = number(json?.code);
+      // Scriptable's Request normally exposes statusCode after loadString(), but
+      // a runtime that omits it still has a TLS-verified, successfully parsed
+      // envelope. Keep known HTTP failures authoritative; do not discard a
+      // valid code: 0 response merely because that metadata is absent.
+      const knownStatus = Number.isInteger(http) && http > 0;
       // Safe diagnostic metadata only. Never retain server messages or payloads.
       const fail = (kind, retry = 0) => {
         const error = new Fault(kind, retry);
-        error.http = Number.isInteger(http) ? http : null;
+        error.http = knownStatus ? http : null;
         error.code = code;
         error.dataType = json?.data === null ? "null" : Array.isArray(json?.data) ? "array" : typeof json?.data;
         return error;
       };
       if (code === 113 || code === 114) throw fail("interactive");
-      if (http === 429 || code === 429) {
+      if ((knownStatus && http === 429) || code === 429) {
         const until = retryAt(headers["Retry-After"] ?? headers["retry-after"], now);
         this.store.set("cooldown", { kind: "rate", until }); throw fail("rate", until);
       }
-      if (http === 401 || http === 403 || code === 401 || code === 403 || code === 102 || code === 101) throw fail("auth");
-      if (http >= 500) throw fail("network");
-      if (http < 200 || http >= 300 || !json || code !== 0 || json.success === false || json.data === undefined || json.data === null) throw fail("protocol");
+      if ((knownStatus && (http === 401 || http === 403)) || code === 401 || code === 403 || code === 102 || code === 101) throw fail("auth");
+      if (knownStatus && http >= 500) throw fail("network");
+      if ((knownStatus && (http < 200 || http >= 300)) || !json || code !== 0 || json.success === false || json.data === undefined || json.data === null) throw fail("protocol");
       return json.data;
     }
     saveToken(data, previousRefresh) {

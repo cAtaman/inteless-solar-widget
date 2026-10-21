@@ -4,7 +4,7 @@
 
 ## Automated checks
 
-`npm run check` builds the single-file Scriptable artifact and runs JavaScript plus Python tests. The suite contains **34 JavaScript tests and 10 Python tests**, with all passing on this Mac. Node tests use only synthetic responses and Scriptable API mocks. Python tests make no external account requests. Test RSA private keys are generated temporarily for independent interoperability checks, never committed or used as credentials.
+`npm run check` builds the single-file Scriptable artifact and runs JavaScript plus Python tests. The suite contains **35 JavaScript tests and 10 Python tests**, with all passing on this Mac. Node tests use only synthetic responses and Scriptable API mocks. Python tests make no external account requests. Test RSA private keys are generated temporarily for independent interoperability checks, never committed or used as credentials.
 
 Meaningful coverage:
 
@@ -20,6 +20,7 @@ Meaningful coverage:
 - Local WebView encryption executed in an isolated JavaScript VM with a native CSPRNG; absent CSPRNG fails closed. This is **not** WKWebView or iOS validation.
 - Initial local WebView navigation is allowed before installing its navigation veto. Mocked stuck document loads, JavaScript evaluations and native network requests hit independent watchdogs, invalidate their timers, and report fixed stage labels. Late results cannot resume authentication; late native rejections are consumed. Timers and navigation callbacks in these tests are mocks.
 - A Chrome request on this Mac, made with a fresh public nonce and no account data, returned the expected anonymous public-key envelope (`code: 0`, `success: true`, base64 DER key). This verifies the current public route and signing convention from this network. It does not test the Scriptable `Request` runtime or an account.
+- The client accepts a valid, TLS-delivered success envelope if a Scriptable-like adapter supplies no usable HTTP status metadata. Known status codes remain authoritative: a known `503` still becomes a network error, and a missing response body remains a protocol error.
 - Widget construction through mocks for small/medium/large sizes: source date/time, dynamic-age element, stale deadline, unavailable labels, demo marking and device-parameter validation. This is **not** visual QA on a phone.
 - Python verified TLS context even when the host's default context factory is replaced with an unverified one; fatal masked-input fallback; no password/token CLI arguments or disk persistence; fixed safe errors and selected-value output instead of raw payload dumps.
 
