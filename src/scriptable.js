@@ -257,11 +257,11 @@ const SolarPhone = (() => {
   }
   function chart(samples) {
     if (typeof DrawContext === "undefined" || typeof Size === "undefined" || samples.length < 2) return null;
-    const width = 620, height = 310, left = 30, right = 9, powerTop = 44, powerBottom = 215, socTop = 238, socBottom = 292;
+    const width = 620, height = 310, left = 30, right = 42, powerTop = 44, powerBottom = 292;
     const ctx = new DrawContext(); ctx.size = new Size(width, height); ctx.opaque = false; ctx.respectScreenScale = true;
     ctx.setFillColor(new Color(PALETTE.panel)); ctx.fillRect(new Rect(0, 0, width, height));
     ctx.setStrokeColor(new Color(PALETTE.hairline)); ctx.setLineWidth(1);
-    for (const y of [powerTop, (powerTop + powerBottom) / 2, powerBottom, socTop]) { const p = new Path(); p.move(new Point(left, y)); p.addLine(new Point(width - right, y)); ctx.addPath(p); ctx.strokePath(); }
+    for (const y of [powerTop, (powerTop + powerBottom) / 2, powerBottom]) { const p = new Path(); p.move(new Point(left, y)); p.addLine(new Point(width - right, y)); ctx.addPath(p); ctx.strokePath(); }
     const powers = samples.flatMap(s => [s.solarPower, s.loadPower, s.batteryPower, s.gridPower]).filter(Number.isFinite).map(Math.abs);
     const maxPower = Math.max(100, ...powers), x = i => left + (width - left - right) * i / (samples.length - 1);
     const draw = (field, color, top, bottom, scale) => {
@@ -278,15 +278,17 @@ const SolarPhone = (() => {
     const powerY = v => (powerTop + powerBottom) / 2 - (v / maxPower) * ((powerBottom - powerTop) / 2 - 4);
     draw("solarPower", PALETTE.solar, powerTop, powerBottom, powerY); draw("loadPower", PALETTE.load, powerTop, powerBottom, powerY);
     draw("batteryPower", PALETTE.battery, powerTop, powerBottom, powerY); draw("gridPower", PALETTE.grid, powerTop, powerBottom, powerY);
-    draw("batterySoc", PALETTE.bright, socTop, socBottom, v => socBottom - Math.max(0, Math.min(100, v)) / 100 * (socBottom - socTop));
+    // SOC shares the time axis with the power traces, but retains a 0–100%
+    // right-hand scale so its percentage is never interpreted as watts.
+    draw("batterySoc", PALETTE.bright, powerTop, powerBottom, v => powerBottom - Math.max(0, Math.min(100, v)) / 100 * (powerBottom - powerTop));
     ctx.setFont(Font.semiboldSystemFont(10)); ctx.setTextColor(new Color(PALETTE.muted));
     ctx.drawTextInRect("PV", new Rect(left, 10, 22, 14)); ctx.drawTextInRect("Load", new Rect(left + 35, 10, 34, 14));
     ctx.setTextColor(new Color(PALETTE.battery)); ctx.drawTextInRect("Batt", new Rect(left + 78, 10, 31, 14));
     ctx.setTextColor(new Color(PALETTE.grid)); ctx.drawTextInRect("Grid", new Rect(left + 119, 10, 32, 14));
     ctx.setTextColor(new Color(PALETTE.bright)); ctx.drawTextInRect("SOC", new Rect(left + 160, 10, 28, 14));
     ctx.setTextColor(new Color(PALETTE.muted)); ctx.setFont(Font.systemFont(9));
-    ctx.drawTextInRect("±" + SolarCore.powerText(maxPower, true), new Rect(width - 75, powerTop - 10, 70, 13));
-    ctx.drawTextInRect("0%", new Rect(2, socBottom - 9, 24, 12)); ctx.drawTextInRect("100%", new Rect(0, socTop - 2, 30, 12));
+    ctx.drawTextInRect("±" + SolarCore.powerText(maxPower, true), new Rect(width - right - 70, powerTop - 10, 70, 13));
+    ctx.drawTextInRect("100%", new Rect(width - 39, powerTop - 2, 38, 12)); ctx.drawTextInRect("0%", new Rect(width - 28, powerBottom - 9, 27, 12));
     return ctx.getImage();
   }
   function freshness(w, r, settings) {

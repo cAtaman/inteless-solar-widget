@@ -1,6 +1,6 @@
 {
   "name": "inteless-scriptable-solar-widget",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "private": true,
   "description": "Read-only Inteless cloud solar widget for Scriptable on iPhone",
   "scripts": {
@@ -13,5 +13,7 @@
     "version:minor": "npm version minor --no-git-tag-version && npm run build",
     "version:major": "npm version major --no-git-tag-version && npm run build"
   },
-  "engines": { "node": ">=20" }
+  "engines": {
+    "node": ">=20"
+  }
 }
