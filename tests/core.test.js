@@ -72,9 +72,10 @@ test('source timestamps support seconds, milliseconds, zones and installation of
   assert.equal(C.timestamp('2026-10-21 24:00:00'), null);
   assert.equal(C.timestamp('2026-10-21'), null);
 });
-test('missing endpoint time, future clocks, offline and elapsed age are distinct', () => {
+test('newest cloud timestamp, missing endpoint times, future clocks, offline and elapsed age are distinct', () => {
   const raw = fixture(); delete raw.battery.time;
-  let r = C.normalize(raw, PREF, NOW); assert.equal(C.status(r, NOW), 'AGE UNKNOWN');
+  raw.grid.time = new Date(NOW - 60000).toISOString();
+  let r = C.normalize(raw, PREF, NOW); assert.equal(r.sourceAt, NOW - 60000); assert.equal(r.timestampCoverageIncomplete, true); assert.equal(C.status(r, NOW), 'CLOUD SNAPSHOT');
   assert.equal(C.status(r, NOW + C.STALE_MS + 1), 'STALE');
   raw.battery.time = new Date(NOW + 3600000).toISOString();
   r = C.normalize(raw, PREF, NOW); assert.equal(C.status(r, NOW), 'STALE · CLOCK MISMATCH');

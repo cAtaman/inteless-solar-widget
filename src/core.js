@@ -86,11 +86,12 @@ const SolarCore = (() => {
       if (t) times[name] = t;
     }
     const sourceTimes = Object.values(times).map(x => x.ms);
-    const sourceAt = sourceTimes.length ? Math.min(...sourceTimes) : null;
+    // The service snapshots readings upstream. Use its newest supplied
+    // timestamp as the cloud-snapshot time; the separate fetchedAt value says
+    // when this device last retrieved that snapshot.
+    const sourceAt = sourceTimes.length ? Math.max(...sourceTimes) : null;
     const future = sourceTimes.some(x => x > now + 5 * 60000);
-    // An endpoint without a source timestamp makes the overall age unknown.
-    // A recent timestamp on another endpoint is not proof of freshness.
-    const ageUnknown = Object.entries(raw).some(([name, payload]) => Object.keys(payload).length > 0 && !times[name]);
+    const timestampCoverageIncomplete = Object.entries(raw).some(([name, payload]) => Object.keys(payload).length > 0 && !times[name]);
     const volts = gridVoltages.map(x => x.value).filter(x => x !== null);
     const connected = bool(g.connected);
     const availability = connected !== null ? (connected ? "connected" : "disconnected") :
@@ -111,7 +112,7 @@ const SolarCore = (() => {
       // from grid voltage.
       loadVoltage,
       todayKwh: quantity(d.etoday, "kWh"),
-      sourceAt, times, future, ageUnknown, fetchedAt: now,
+      sourceAt, times, future, ageUnknown: sourceAt === null, timestampCoverageIncomplete, fetchedAt: now,
       offline: number(d.status) === 0 || number(f.status) === 0,
       hasReadings: [f.pvPower, p.pac, f.battPower, b.power, f.soc, b.soc, g.pac, f.gridOrMeterPower, f.loadOrEpsPower, f.homeLoadPower, l.pac, d.etoday].some(v => quantity(v, "W") !== null) || pvInputs.some(x => x.value !== null) || gridVoltages.some(x => x.value !== null)
     };
