@@ -89,3 +89,7 @@ python3 scripts/package.py
 The package command creates **`dist/IntelessSolar-Widget.zip`**, containing only the JavaScript widget, its concise setup guide, API/validation notes, license and SHA-256 manifest. The optional Python diagnostic is a **separate** `dist/validate_inteless.py`; it is not part of the widget installation. Neither delivery includes `.env`, credentials, captures, editor files, or local caches. Source edits go in `src/`; regenerate the committed Scriptable file using `npm run build`.
 
 Read [API evidence and licenses](docs/RESEARCH.md), [tests and pending device checks](docs/VALIDATION.md), and the [platform comparison](reports/iPhone%20solar%20widget%20platform%20decision.md). No official public API stability contract or quota was found.
+
+## Versions
+
+The `version` in [package.json](package.json) is the canonical widget version. Every `npm run build` writes it at the top of the installable Scriptable file and shows it in Scriptable's menu and local validation report. Use `npm run version:patch`, `npm run version:minor`, or `npm run version:major`, then run `npm run check` and make an atomic commit. Semantic versions identify a released build without incorrectly claiming that the generated file contains its own Git commit hash.

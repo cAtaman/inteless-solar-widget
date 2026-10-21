@@ -3,6 +3,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const fs = require('node:fs');
+const path = require('node:path');
 const crypto = require('node:crypto');
 
 function runtime(options = {}) {
@@ -54,6 +55,13 @@ function runtime(options = {}) {
   return { ...env, keys, files, requests, timers, webviews };
 }
 function strings(w){return w.items.flatMap(x=>x instanceof Object && x.items?strings(x):x.value?[x.value]:[]);}
+test('built Scriptable artifact declares the canonical semantic version',()=>{
+  const root=path.join(__dirname,'..'), version=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version;
+  const artifact=fs.readFileSync(path.join(root,'scriptable','Inteless Solar.js'),'utf8');
+  assert.ok(artifact.startsWith('// Variables used by Scriptable.'));
+  assert.ok(artifact.includes(`// Version: ${version}\n`));
+  assert.ok(artifact.includes(`const SOLAR_WIDGET_VERSION = "${version}";`));
+});
 test('adapter uses verified TLS, rejects redirects, fixed host, headers and JSON',async()=>{
   const r=runtime();await r.Phone.transport({method:'POST',path:'/oauth/token/new',params:{},body:{password:'SYNTHETIC-ENCRYPTED'},token:undefined});
   const req=r.requests[0];assert.equal(req.allowInsecureRequest,false);assert.equal(req.onRedirect(),null);

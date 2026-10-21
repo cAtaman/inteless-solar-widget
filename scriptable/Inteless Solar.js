@@ -1,7 +1,9 @@
 // Variables used by Scriptable.
 // icon-color: deep-green; icon-glyph: solar-panel;
 // Inteless Solar — install this single file in Scriptable.
+// Version: 1.1.0
 // Credentials are entered locally and stored in Scriptable Keychain.
+const SOLAR_WIDGET_VERSION = "1.1.0";
 // Original implementation. Protocol evidence and limitations: docs/RESEARCH.md.
 const SolarCore = (() => {
   const BASE = "https://pv.inteless.com";
@@ -444,6 +446,7 @@ const SolarCrypto = (() => {
 const SolarPhone = (() => {
   const PREFIX = "inteless.solar.v1.";
   const DEFAULTS = { utcOffsetMinutes: 60, batteryPositive: "unknown", gridPositive: "unknown" };
+  const VERSION = typeof SOLAR_WIDGET_VERSION === "string" ? SOLAR_WIDGET_VERSION : "development";
   let deadline = Infinity;
   async function bounded(operation, milliseconds, kind, stage) {
     const remaining = Math.min(milliseconds, deadline - Date.now());
@@ -787,7 +790,7 @@ const SolarPhone = (() => {
   async function diagnostics(state, selected, settings) {
     // Local UI, no raw responses, usernames, tokens or serials in this report.
     const r = state.reading;
-    const lines = ["LOCAL VALIDATION — actual cloud response if available", "Target device: " + Device.model() + " / iOS " + Device.systemVersion(),
+    const lines = [`LOCAL VALIDATION v${VERSION} — actual cloud response if available`, "Target device: " + Device.model() + " / iOS " + Device.systemVersion(),
       "State: " + SolarCore.status(r, Date.now(), state.error, state.cached),
       "Account login is only validated if this phone accepted it.", ""];
     const background = store.get("backgroundProbe");
@@ -863,7 +866,7 @@ const SolarPhone = (() => {
       Script.setWidget(widget(state, selected, settings || DEFAULTS, config.widgetFamily)); return;
     }
     const actions = ["Refresh and preview large", "Sign in / change account", "Select plant / inverter", "Local validation report", "Installation time zone", "Capability check — no login", "Preview DEMO", "Forget account and cached data", "Test one refresh-token grant", "Test full sign-in again"];
-    const action = await choose("Inteless Solar · 2026.10.21.3", actions, true);
+    const action = await choose("Inteless Solar · v" + VERSION, actions, true);
     if (action < 0) return;
     if (action === 6) { await widget(demo(Date.now()), null, DEFAULTS).presentLarge(); return; }
     if (action === 5) { await capability(); return; }
@@ -895,7 +898,7 @@ const SolarPhone = (() => {
     if (action === 3) await diagnostics(state, selected, settings);
     else await widget(state, selected, settings).presentLarge();
   }
-  return { main, widget, demo, transport, encrypt, selection, clock, voltages, cache, store, history, cleanedHistory, chart };
+  return { main, widget, demo, transport, encrypt, selection, clock, voltages, cache, store, history, cleanedHistory, chart, version: VERSION };
 })();
 async function runSolarWidget() {
   try { await SolarPhone.main(); }
