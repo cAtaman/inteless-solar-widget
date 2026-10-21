@@ -214,15 +214,15 @@ const SolarPhone = (() => {
   const PALETTE = { ink: "0A1115", panel: "142027", hairline: "274047", muted: "9CB4B9", bright: "F1F7F5",
     solar: "F5BD4B", load: "62D4BB", battery: "AAB9FF", grid: "F48B7A", warning: "F3C66B" };
   function primaryVoltage(values) { return values.find(x => x.value !== null)?.value ?? null; }
-  function card(parent, label, value, note, accent) {
+  function card(parent, label, value, note, accent, height = 42) {
     const c = parent.addStack(); c.layoutVertically(); c.backgroundColor = new Color(PALETTE.panel); c.cornerRadius = 11;
-    c.size = new Size(98, 42);
+    c.size = new Size(98, height);
     c.setPadding(6, 7, 6, 7); text(c, label, 8, PALETTE.muted, true).lineLimit = 1;
     text(c, value, 15, accent, true).lineLimit = 1;
     if (note) text(c, note, 8, PALETTE.muted).lineLimit = 1;
     return c;
   }
-  function metricGrid(w, r) {
+  function metricGrid(w, r, expanded = false) {
     const metrics = [
       ["Battery SOC", SolarCore.valueText(r.batterySoc, "%", 0), SolarCore.valueText(r.batteryVoltage, " V"), PALETTE.battery],
       ["PV power", SolarCore.powerText(r.solarPower), "Solar generation", PALETTE.solar],
@@ -233,7 +233,7 @@ const SolarPhone = (() => {
     ];
     for (let i = 0; i < metrics.length; i += 3) {
       const row = w.addStack(); row.layoutHorizontally(); row.spacing = 5;
-      for (const m of metrics.slice(i, i + 3)) { card(row, ...m); if (m !== metrics[Math.min(i + 2, metrics.length - 1)]) row.addSpacer(0); }
+      for (const m of metrics.slice(i, i + 3)) { card(row, ...m, expanded ? 64 : 42); if (m !== metrics[Math.min(i + 2, metrics.length - 1)]) row.addSpacer(0); }
     }
   }
   function cleanedHistory(value) {
@@ -324,10 +324,10 @@ const SolarPhone = (() => {
       text(w, "Load " + SolarCore.powerText(r.loadPower) + " · Grid " + SolarCore.valueText(primaryVoltage(r.gridVoltages), " V"), 10, PALETTE.muted).lineLimit = 1;
       freshness(w, r, settings);
     } else {
-      metricGrid(w, r);
+      metricGrid(w, r, family === "large");
       if (family === "large") {
         const image = chart(state.history || []);
-        if (image) { const graph = w.addImage(image); graph.imageSize = new Size(310, 155); }
+        if (image) { const graph = w.addImage(image); graph.imageSize = new Size(310, 135); }
         else text(w, "Trend chart begins after two on-device refresh samples.", 9, PALETTE.muted).lineLimit = 1;
         const today = SolarCore.todayValue(r, now, settings.utcOffsetMinutes);
         text(w, `Grid ${SolarCore.powerText(r.gridPower, true)} ${r.gridDirection} · ${voltages(r.pvInputs)} · Today ${SolarCore.valueText(today, " kWh", 2)}`, 8, PALETTE.muted).lineLimit = 1;

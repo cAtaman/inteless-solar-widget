@@ -124,6 +124,13 @@ test('widget header uses the plant name and never exposes a saved inverter alias
   const texts=strings(w).join(' ');
   assert.ok(texts.includes('SYNTHETIC PLANT'));assert.ok(!texts.includes('SYNTHETIC-INVERTER-ID'));
 });
+test('large widget balances its expanded metric grid and trend chart heights',()=>{
+  const r=runtime(), now=Date.UTC(2026,9,21,12), state=r.Phone.demo(now);state.demo=false;
+  state.history=[{at:now-60000,solarPower:500,loadPower:400,batteryPower:-100,gridPower:0,batterySoc:90},{at:now,solarPower:600,loadPower:450,batteryPower:-120,gridPower:0,batterySoc:89}];
+  const w=r.Phone.widget(state,{plantName:'SYNTHETIC PLANT'}, {utcOffsetMinutes:60}, 'large', now);
+  assert.equal(w.items[1].items[0].size.height,64);
+  assert.equal(w.items.find(item=>item.image)?.imageSize.height,135);
+});
 test('demo always visibly marked; no-source timestamp never uses fetch time as source',()=>{
   const r=runtime();const state=r.Phone.demo(Date.now());
   assert.ok(strings(r.Phone.widget(state,null,{utcOffsetMinutes:60})).join(' ').includes('DEMO · NOT YOUR INSTALLATION'));
