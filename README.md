@@ -2,7 +2,7 @@
 
 A read-only **Scriptable Home Screen widget**, plus an optional **a-Shell Python account validator**. Neither needs an always-on server. The widget logs in independently; a-Shell is a diagnostic tool, not its background engine.
 
-Target supplied by the owner: **iPhone 12, iOS 27**. Compatibility on that physical phone and account access are **not yet validated**. Desktop fixture tests pass; see [validation](docs/VALIDATION.md).
+Target supplied by the owner: **iPhone 12, iOS 27**. Scriptable installation, script import and menu launch have been observed on the phone; account data and background execution remain **unvalidated**. Desktop fixture tests pass; see [validation](docs/VALIDATION.md).
 
 ## Start on your iPhone
 
@@ -75,7 +75,7 @@ The parameter **`demo`** previews clearly labeled synthetic readings, with no lo
 
 ## Mac-assisted transfer
 
-A USB cable can enable Finder File Sharing for apps that expose it; it is not a generic iPhone shell or app installer. This Mac currently has no Xcode `devicectl`. Finder showed a connected iPhone; an app's file-sharing container has not been verified. iPhone Mirroring is now configured and was used to reach the official Scriptable download confirmation; installation/import and widget execution have not yet been verified. The owner completes required device/Apple authentication locally. Existing cloud credentials should be entered on the phone, not supplied to this chat.
+A USB cable can enable Finder File Sharing for apps that expose it; it is not a generic iPhone shell or app installer. This Mac currently has no Xcode `devicectl`. Finder showed a connected iPhone; an app's file-sharing container has not been verified. iPhone Mirroring is now configured, Scriptable is installed, and the single widget file synced through Scriptable's existing iCloud documents folder and launched successfully. Home Screen widget execution is still pending. The owner completes required device/Apple authentication locally. Existing cloud credentials should be entered on the phone, not supplied to this chat.
 
 ## Develop and verify on the Mac
 

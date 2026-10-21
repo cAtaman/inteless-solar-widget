@@ -1,6 +1,6 @@
 # Validation status
 
-**Desktop fixtures and protocol interoperability only. No account or physical iPhone validation yet.** Target reported by owner: iPhone 12 with iOS 27. No hardware claim is inferred from the Mac tests.
+**Desktop fixtures/interoperability pass, and the script has been imported and launched on the owner's phone. Account readings and background widget behavior are not yet validated.** Target reported by owner: iPhone 12 with iOS 27. No hardware claim is inferred from the Mac tests.
 
 ## Automated checks
 
@@ -28,6 +28,8 @@ The TLS context configuration is tested, but invalid-certificate rejection insid
 The anonymous HTTPS public-key service responded successfully during source research. The key was inspected as 4096-bit RSA. The completed Python validator's `--probe --network` also passed from this Mac: verified HTTPS, anonymous key retrieval, and secure-random public encryption. This proves neither the owner's account compatibility, the phone's runtime nor any authenticated monitoring response. No published demo account, password grant, refresh grant, telemetry call, inverter settings or trigger operation was used by the agent.
 
 ## Owner's local acceptance checks
+
+Installation smoke check observed through iPhone Mirroring: the official Scriptable app opened, `Inteless Solar.js` synced from its existing iCloud folder, and the script displayed its local action menu. The cloud sign-in dialog was opened for owner-only credential entry. No credentials or phone screenshots are recorded in this repository. Foreground crypto success, account data and the background probe remain unconfirmed at this stage.
 
 1. Run the a-Shell probes, if desired, then verify **masked input using only nonsecret `test`** before a local account sign-in. Stop on TLS or input-safety errors.
 2. Run the Scriptable foreground capability check, then add a Home Screen widget with parameter `probe`. Verify PASS in the actual background process and that the in-app local validation report can read its recorded result.
