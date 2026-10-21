@@ -141,7 +141,8 @@ const SolarPhone = (() => {
     if (i < 0) return null;
     if (typeof rows[i].sn !== "string" || !rows[i].sn) throw new SolarCore.Fault("protocol");
     const selection = { plantId: String(plant.id), sn: rows[i].sn,
-      name: rows[i].alias || plant.name || plant.plantName || "Solar installation" };
+      plantName: plant.name || plant.plantName || "Solar installation",
+      inverterName: rows[i].alias || "Inverter" };
     const key = `${selection.plantId}:${selection.sn}`;
     settings.selections = (settings.selections || []).filter(x => `${x.plantId}:${x.sn}` !== key).concat(selection);
     settings.selection = selection;
@@ -170,6 +171,19 @@ const SolarPhone = (() => {
   function selection(settings, parameter) {
     if (!parameter) return settings.selection || null;
     return (settings.selections || []).find(x => `${x.plantId}:${x.sn}` === parameter) || null;
+  }
+  async function backfillPlantName(api, settings, selected) {
+    if (selected?.plantName || !selected?.plantId) return;
+    try {
+      const plants = await api.list("/api/v1/plants");
+      const plant = plants.find(x => String(x.id) === selected.plantId);
+      const plantName = plant?.name || plant?.plantName;
+      if (!plantName) return;
+      selected.plantName = plantName;
+      settings.selections = (settings.selections || []).map(x => `${x.plantId}:${x.sn}` === `${selected.plantId}:${selected.sn}` ? selected : x);
+      if (`${settings.selection?.plantId}:${settings.selection?.sn}` === `${selected.plantId}:${selected.sn}`) settings.selection = selected;
+      store.set("settings", settings);
+    } catch (_) { /* Keep the current widget usable if this one-time migration cannot complete. */ }
   }
   function clock(ms, offset = 60, full = false) {
     if (!Number.isFinite(ms)) return "Unavailable";
@@ -292,7 +306,7 @@ const SolarPhone = (() => {
     w.url = "scriptable:///run?scriptName=" + encodeURIComponent(Script.name());
     const r = state.reading;
     const header = w.addStack(); header.layoutHorizontally();
-    text(header, state.demo ? "DEMO" : (selected?.name || "INTELESS SOLAR"), 11, PALETTE.bright, true).lineLimit = 1;
+    text(header, state.demo ? "DEMO" : (selected?.plantName || "Solar installation"), 11, PALETTE.bright, true).lineLimit = 1;
     header.addSpacer(); text(header, state.demo ? "SYNTHETIC" : SolarCore.status(r, now, state.error, state.cached), 8, state.error || state.cached ? PALETTE.warning : PALETTE.load, true).lineLimit = 1;
     if (state.demo) text(w, "DEMO · NOT YOUR INSTALLATION", 8, PALETTE.warning, true).lineLimit = 1;
     if (!r) {
@@ -322,7 +336,9 @@ const SolarPhone = (() => {
   }
   async function getState(settings, selected, force = false) {
     const local = cache(settings.scope);
-    const state = await SolarCore.refresh({ client: client(), cache: local, selection: selected, preferences: settings, now: Date.now(), force });
+    const api = client();
+    const state = await SolarCore.refresh({ client: api, cache: local, selection: selected, preferences: settings, now: Date.now(), force });
+    if (!state.error && !state.cached) await backfillPlantName(api, settings, selected);
     state.history = history(local, selected, state);
     return state;
   }

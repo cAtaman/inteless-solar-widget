@@ -110,6 +110,12 @@ test('all widget sizes show cloud and fetch ages together without static timesta
     if(size!=='small')assert.ok(texts.includes('Unavailable'));
   }
 });
+test('widget header uses the plant name and never exposes a saved inverter alias',()=>{
+  const r=runtime(), now=Date.UTC(2026,9,21,12), state=r.Phone.demo(now);state.demo=false;
+  const w=r.Phone.widget(state,{plantName:'SYNTHETIC PLANT',inverterName:'SYNTHETIC-INVERTER-ID'}, {utcOffsetMinutes:60}, 'medium', now);
+  const texts=strings(w).join(' ');
+  assert.ok(texts.includes('SYNTHETIC PLANT'));assert.ok(!texts.includes('SYNTHETIC-INVERTER-ID'));
+});
 test('demo always visibly marked; no-source timestamp never uses fetch time as source',()=>{
   const r=runtime();const state=r.Phone.demo(Date.now());
   assert.ok(strings(r.Phone.widget(state,null,{utcOffsetMinutes:60})).join(' ').includes('DEMO · NOT YOUR INSTALLATION'));
