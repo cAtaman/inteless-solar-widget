@@ -317,7 +317,7 @@ const SolarPhone = (() => {
       Script.setWidget(widget(state, selected, settings || DEFAULTS, config.widgetFamily)); return;
     }
     const actions = ["Refresh and preview large", "Sign in / change account", "Select plant / inverter", "Local validation report", "Installation time zone", "Capability check — no login", "Preview DEMO", "Forget account and cached data", "Test one refresh-token grant", "Test full sign-in again"];
-    const action = await choose("Inteless Solar", actions);
+    const action = await choose("Inteless Solar · 2026.10.21.2", actions);
     if (action < 0) return;
     if (action === 6) { await widget(demo(Date.now()), null, DEFAULTS).presentLarge(); return; }
     if (action === 5) { await capability(); return; }
@@ -367,6 +367,9 @@ async function runSolarWidget() {
         empty: "No plants, devices or supported readings were returned.",
         protocol: "The API response was not recognized. Use the a-Shell local validator to identify the compatibility gap without sharing credentials." })[kind] || "Local setup or storage is unavailable. Unlock the phone, rerun Scriptable and use the capability check. No raw error details are logged.";
       if (e instanceof SolarCore.Fault && e.stage) a.message += "\n\nStopped at: " + e.stage + ".";
+      if (e instanceof SolarCore.Fault && e.http !== undefined) {
+        a.message += `\n\nHTTP ${e.http ?? "unknown"} · cloud code ${e.code ?? "unknown"} · data ${e.dataType}.`;
+      }
       a.addAction("OK"); await a.presentAlert();
     }
   }

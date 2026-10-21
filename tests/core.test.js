@@ -183,6 +183,17 @@ test('cache scope, corrupt data, empty responses, partial fetches and disk failu
 test('MD5 protocol helper matches independent native crypto including unicode and long input',()=>{
   for(const s of ['', 'abc', 'nonce=1792584000000&source=elinterPOWER_VIEW', '☀️é', 'a'.repeat(10000)])assert.equal(K.md5(s),crypto.createHash('md5').update(s).digest('hex'));
 });
+test('cloud errors retain only numeric status/code and data type for local diagnostics',async()=>{
+  for(const data of [null,undefined,'SYNTHETIC SECRET',{access_token:'SYNTHETIC SECRET'},[]]){
+    const api=new C.Client({store:{get:()=>null},transport:async()=>({status:200,json:{code:999,message:'SYNTHETIC SECRET',data}})});
+    await assert.rejects(api.request('GET','/anonymous/publicKey'),error=>{
+      assert.equal(error.kind,'protocol');assert.equal(error.http,200);assert.equal(error.code,999);
+      assert.equal(error.dataType,data===null?'null':Array.isArray(data)?'array':typeof data);
+      assert.ok(!JSON.stringify(error).includes('SYNTHETIC SECRET'));
+      assert.equal(error.message,'protocol');return true;
+    });
+  }
+});
 for(const bits of [2048,4096])test(`RSA ${bits} encryption independently decodes via native crypto`,()=>{
   const {publicKey,privateKey}=crypto.generateKeyPairSync('rsa',{modulusLength:bits});
   const key=publicKey.export({type:'spki',format:'pem'});

@@ -150,14 +150,22 @@ const SolarCore = (() => {
       catch (e) { if (e instanceof Fault) throw e; throw new Fault("network"); }
       const { status: http, json, headers = {} } = response;
       const code = number(json?.code);
-      if (code === 113 || code === 114) throw new Fault("interactive");
+      // Safe diagnostic metadata only. Never retain server messages or payloads.
+      const fail = (kind, retry = 0) => {
+        const error = new Fault(kind, retry);
+        error.http = Number.isInteger(http) ? http : null;
+        error.code = code;
+        error.dataType = json?.data === null ? "null" : Array.isArray(json?.data) ? "array" : typeof json?.data;
+        return error;
+      };
+      if (code === 113 || code === 114) throw fail("interactive");
       if (http === 429 || code === 429) {
         const until = retryAt(headers["Retry-After"] ?? headers["retry-after"], now);
-        this.store.set("cooldown", { kind: "rate", until }); throw new Fault("rate", until);
+        this.store.set("cooldown", { kind: "rate", until }); throw fail("rate", until);
       }
-      if (http === 401 || http === 403 || code === 401 || code === 403 || code === 102 || code === 101) throw new Fault("auth");
-      if (http >= 500) throw new Fault("network");
-      if (http < 200 || http >= 300 || !json || code !== 0 || json.success === false || json.data === undefined || json.data === null) throw new Fault("protocol");
+      if (http === 401 || http === 403 || code === 401 || code === 403 || code === 102 || code === 101) throw fail("auth");
+      if (http >= 500) throw fail("network");
+      if (http < 200 || http >= 300 || !json || code !== 0 || json.success === false || json.data === undefined || json.data === null) throw fail("protocol");
       return json.data;
     }
     saveToken(data, previousRefresh) {
@@ -724,7 +732,7 @@ const SolarPhone = (() => {
       Script.setWidget(widget(state, selected, settings || DEFAULTS, config.widgetFamily)); return;
     }
     const actions = ["Refresh and preview large", "Sign in / change account", "Select plant / inverter", "Local validation report", "Installation time zone", "Capability check — no login", "Preview DEMO", "Forget account and cached data", "Test one refresh-token grant", "Test full sign-in again"];
-    const action = await choose("Inteless Solar", actions);
+    const action = await choose("Inteless Solar · 2026.10.21.2", actions);
     if (action < 0) return;
     if (action === 6) { await widget(demo(Date.now()), null, DEFAULTS).presentLarge(); return; }
     if (action === 5) { await capability(); return; }
@@ -774,6 +782,9 @@ async function runSolarWidget() {
         empty: "No plants, devices or supported readings were returned.",
         protocol: "The API response was not recognized. Use the a-Shell local validator to identify the compatibility gap without sharing credentials." })[kind] || "Local setup or storage is unavailable. Unlock the phone, rerun Scriptable and use the capability check. No raw error details are logged.";
       if (e instanceof SolarCore.Fault && e.stage) a.message += "\n\nStopped at: " + e.stage + ".";
+      if (e instanceof SolarCore.Fault && e.http !== undefined) {
+        a.message += `\n\nHTTP ${e.http ?? "unknown"} · cloud code ${e.code ?? "unknown"} · data ${e.dataType}.`;
+      }
       a.addAction("OK"); await a.presentAlert();
     }
   }
