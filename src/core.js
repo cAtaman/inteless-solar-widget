@@ -1,4 +1,4 @@
-// Original implementation. Protocol evidence and limitations: docs/RESEARCH.md.
+// Read-only Inteless cloud client and normalized reading model.
 const SolarCore = (() => {
   const BASE = "https://pv.inteless.com";
   // This asks iOS to refresh after a minute. WidgetKit remains free to defer
@@ -24,7 +24,7 @@ const SolarCore = (() => {
       if (expected === "kWh" && u === "Wh") return n / 1000;
       return null;
     }
-    return number(v); // Bare endpoint fields use the units documented in RESEARCH.md.
+    return number(v); // Bare endpoint fields use the monitoring API's native units.
   }
   function pick(unit, ...values) { return values.map(v => quantity(v, unit)).find(v => v !== null) ?? null; }
   function day(ms, offsetMinutes) { return new Date(ms + offsetMinutes * 60000).toISOString().slice(0, 10); }

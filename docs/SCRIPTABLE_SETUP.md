@@ -1,6 +1,6 @@
 # Install Inteless Solar
 
-This package contains the **JavaScript Scriptable widget only**. Python and a-Shell are optional diagnostics, delivered separately; neither is needed to run this widget.
+This package contains the **JavaScript Scriptable widget only**. It runs directly in Scriptable; no companion runtime or server is required.
 
 Target: the owner's iPhone 12 / iOS 27. Account and background compatibility must be checked locally.
 
@@ -23,6 +23,6 @@ Offline/network/login failures retain the last successful readings with their or
 
 The parameter **`demo`** displays clearly labeled synthetic data. It is never substituted for failed live readings.
 
-No actual account login or iPhone background validation has been claimed by the automated desktop tests. See **docs/VALIDATION.md** for the tests and remaining device checks, and **docs/RESEARCH.md** for API evidence and compatibility limitations. If background secure crypto consistently fails while foreground crypto succeeds, native SwiftUI/WidgetKit is the fallback.
+The automated desktop tests use synthetic data and Scriptable API mocks. Validate the actual account readings and background behavior from the installed widget. If background secure crypto consistently fails while foreground crypto succeeds, native SwiftUI/WidgetKit is the fallback.
 
 **Forget account and cached data** removes this script's stored credentials, tokens, selections and telemetry cache from Scriptable. No inverter settings are changed by this implementation.

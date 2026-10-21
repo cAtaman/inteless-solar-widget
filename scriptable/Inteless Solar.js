@@ -1,10 +1,10 @@
 // Variables used by Scriptable.
 // icon-color: deep-green; icon-glyph: solar-panel;
 // Inteless Solar — install this single file in Scriptable.
-// Version: 1.1.3
+// Version: 1.1.4
 // Credentials are entered locally and stored in Scriptable Keychain.
-const SOLAR_WIDGET_VERSION = "1.1.3";
-// Original implementation. Protocol evidence and limitations: docs/RESEARCH.md.
+const SOLAR_WIDGET_VERSION = "1.1.4";
+// Read-only Inteless cloud client and normalized reading model.
 const SolarCore = (() => {
   const BASE = "https://pv.inteless.com";
   // This asks iOS to refresh after a minute. WidgetKit remains free to defer
@@ -30,7 +30,7 @@ const SolarCore = (() => {
       if (expected === "kWh" && u === "Wh") return n / 1000;
       return null;
     }
-    return number(v); // Bare endpoint fields use the units documented in RESEARCH.md.
+    return number(v); // Bare endpoint fields use the monitoring API's native units.
   }
   function pick(unit, ...values) { return values.map(v => quantity(v, unit)).find(v => v !== null) ?? null; }
   function day(ms, offsetMinutes) { return new Date(ms + offsetMinutes * 60000).toISOString().slice(0, 10); }
@@ -925,7 +925,7 @@ async function runSolarWidget() {
         rate: "The cloud rate-limited requests. Wait at least 10 minutes; saved Retry-After limits are respected.",
         network: "Network or verified HTTPS failed. Check connectivity and try later.",
         empty: "No plants, devices or supported readings were returned.",
-        protocol: "The API response was not recognized. Use the a-Shell local validator to identify the compatibility gap without sharing credentials." })[kind] || "Local setup or storage is unavailable. Unlock the phone, rerun Scriptable and use the capability check. No raw error details are logged.";
+        protocol: "The API response was not recognized. Open the local validation report and compare the reported readings with the monitoring app." })[kind] || "Local setup or storage is unavailable. Unlock the phone, rerun Scriptable and use the capability check. No raw error details are logged.";
       if (e instanceof SolarCore.Fault && e.stage) a.message += "\n\nStopped at: " + e.stage + ".";
       if (e instanceof SolarCore.Fault && e.http !== undefined) {
         a.message += `\n\nHTTP ${e.http ?? "unknown"} · cloud code ${e.code ?? "unknown"} · data ${e.dataType}.`;

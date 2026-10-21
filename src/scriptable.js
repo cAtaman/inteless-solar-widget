@@ -481,7 +481,7 @@ async function runSolarWidget() {
         rate: "The cloud rate-limited requests. Wait at least 10 minutes; saved Retry-After limits are respected.",
         network: "Network or verified HTTPS failed. Check connectivity and try later.",
         empty: "No plants, devices or supported readings were returned.",
-        protocol: "The API response was not recognized. Use the a-Shell local validator to identify the compatibility gap without sharing credentials." })[kind] || "Local setup or storage is unavailable. Unlock the phone, rerun Scriptable and use the capability check. No raw error details are logged.";
+        protocol: "The API response was not recognized. Open the local validation report and compare the reported readings with the monitoring app." })[kind] || "Local setup or storage is unavailable. Unlock the phone, rerun Scriptable and use the capability check. No raw error details are logged.";
       if (e instanceof SolarCore.Fault && e.stage) a.message += "\n\nStopped at: " + e.stage + ".";
       if (e instanceof SolarCore.Fault && e.http !== undefined) {
         a.message += `\n\nHTTP ${e.http ?? "unknown"} · cloud code ${e.code ?? "unknown"} · data ${e.dataType}.`;
