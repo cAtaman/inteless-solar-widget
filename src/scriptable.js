@@ -176,6 +176,12 @@ const SolarPhone = (() => {
     const iso = new Date(ms + offset * 60000).toISOString();
     return (full ? iso.slice(0, 10) + " " : "") + iso.slice(11, full ? 19 : 16);
   }
+  function friendlyClock(ms, offset = 60) {
+    if (!Number.isFinite(ms)) return "Unavailable";
+    const d = new Date(ms + offset * 60000);
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    return `${d.getUTCDate()} ${months[d.getUTCMonth()]}, ${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}`;
+  }
   function voltages(values) {
     return values.length ? values.map(x => `${x.label} ${SolarCore.valueText(x.value, " V")}`).join(" · ") : "Unavailable";
   }
@@ -274,17 +280,16 @@ const SolarPhone = (() => {
     ctx.drawTextInRect("0%", new Rect(2, socBottom - 9, 24, 12)); ctx.drawTextInRect("100%", new Rect(0, socTop - 2, 30, 12));
     return ctx.getImage();
   }
-  function freshness(w, r, settings, now, includeChecked) {
-    if (!r.sourceAt) { text(w, "Source time unavailable · AGE UNKNOWN", 9, PALETTE.warning).lineLimit = 1; return; }
-    text(w, "Cloud source " + clock(r.sourceAt, settings.utcOffsetMinutes, true), 9, PALETTE.muted).lineLimit = 1;
-    const source = w.addStack(); source.layoutHorizontally(); source.spacing = 4;
-    text(source, "Latest cloud snapshot", 9, PALETTE.muted);
-    const sourceAge = source.addDate(new Date(r.sourceAt)); sourceAge.applyRelativeStyle(); sourceAge.font = Font.systemFont(9); sourceAge.textColor = new Color(PALETTE.muted);
-    const fetched = w.addStack(); fetched.layoutHorizontally(); fetched.spacing = 4;
-    text(fetched, "Last fetched", 9, PALETTE.muted);
-    const fetchedAge = fetched.addDate(new Date(r.fetchedAt)); fetchedAge.applyRelativeStyle(); fetchedAge.font = Font.systemFont(9); fetchedAge.textColor = new Color(PALETTE.bright);
-    text(w, r.timestampCoverageIncomplete ? "Some endpoint timestamps unavailable" : "Stale after " + clock(r.sourceAt + SolarCore.STALE_MS, settings.utcOffsetMinutes), 8, PALETTE.warning).lineLimit = 1;
-    if (includeChecked) text(w, "Last fetch " + clock(r.fetchedAt, settings.utcOffsetMinutes, true) + " · iOS may defer the 1 min request", 8, PALETTE.muted).lineLimit = 1;
+  function freshness(w, r, settings) {
+    const row = w.addStack(); row.layoutHorizontally(); row.spacing = 2;
+    if (!r.sourceAt) {
+      text(row, "Cloud timestamp unavailable · Fetch " + friendlyClock(r.fetchedAt, settings.utcOffsetMinutes) + " · ", 8, PALETTE.warning).lineLimit = 1;
+    } else {
+      text(row, "Cloud " + friendlyClock(r.sourceAt, settings.utcOffsetMinutes) + " · ", 8, PALETTE.muted).lineLimit = 1;
+      const sourceAge = row.addDate(new Date(r.sourceAt)); sourceAge.applyRelativeStyle(); sourceAge.font = Font.systemFont(8); sourceAge.textColor = new Color(PALETTE.muted); sourceAge.minimumScaleFactor = 0.5;
+      text(row, " · Fetch " + friendlyClock(r.fetchedAt, settings.utcOffsetMinutes) + " · ", 8, PALETTE.bright).lineLimit = 1;
+    }
+    const fetchedAge = row.addDate(new Date(r.fetchedAt)); fetchedAge.applyRelativeStyle(); fetchedAge.font = Font.systemFont(8); fetchedAge.textColor = new Color(PALETTE.bright); fetchedAge.minimumScaleFactor = 0.5;
   }
   function widget(state, selected, settings, family = "large", now = Date.now()) {
     const w = new ListWidget(); w.setPadding(12, 12, 10, 12); w.spacing = 4;
@@ -306,7 +311,7 @@ const SolarPhone = (() => {
       text(w, SolarCore.valueText(r.batterySoc, "%", 0), 31, PALETTE.battery, true);
       text(w, "Battery SOC · PV " + SolarCore.powerText(r.solarPower), 10, PALETTE.muted);
       text(w, "Load " + SolarCore.powerText(r.loadPower) + " · Grid " + SolarCore.valueText(primaryVoltage(r.gridVoltages), " V"), 10, PALETTE.muted).lineLimit = 1;
-      freshness(w, r, settings, now, false);
+      freshness(w, r, settings);
     } else {
       metricGrid(w, r);
       if (family === "large") {
@@ -317,7 +322,7 @@ const SolarPhone = (() => {
         text(w, `Grid ${SolarCore.powerText(r.gridPower, true)} ${r.gridDirection} · Today ${SolarCore.valueText(today, " kWh", 2)}`, 8, PALETTE.muted).lineLimit = 1;
         text(w, "PV inputs " + voltages(r.pvInputs), 8, PALETTE.muted).lineLimit = 2;
       }
-      freshness(w, r, settings, now, family === "large");
+      freshness(w, r, settings);
     }
     return w;
   }

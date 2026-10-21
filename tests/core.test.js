@@ -86,7 +86,24 @@ test('household vs EPS and yesterday daily production are handled honestly', () 
   const raw = fixture(); raw.flow.existsThreeLoad = true; raw.flow.homeLoadPower = 1800;
   const r = C.normalize(raw, PREF, NOW);
   assert.equal(r.loadLabel, 'Household'); assert.equal(r.loadPower, 1800);
+  delete raw.flow.homeLoadPower;
+  const fallback = C.normalize(raw, PREF, NOW);
+  assert.equal(fallback.loadLabel, 'Load / EPS'); assert.equal(fallback.loadPower, 1600);
   assert.equal(C.todayValue(r, NOW + 86400000, 60), null);
+});
+test('load endpoint is read for an explicit output-voltage candidate even when flow has power', async () => {
+  const calls = [], raw = fixture(); delete raw.flow.loadVoltage;
+  const api = client(async req => {
+    calls.push(req.path);
+    const data = req.path.endsWith('/flow') ? raw.flow : req.path.endsWith('/realtime/input') ? raw.pv :
+      req.path.includes('/battery/') ? raw.battery : req.path.includes('/grid/') ? raw.grid :
+      req.path.includes('/load/') ? { time: stamp, voltage: 227, pac: 1600 } : raw.detail;
+    return ok(data);
+  }, { token });
+  const result = await api.readings(SELECT);
+  assert.ok(calls.includes('/api/v1/inverter/load/fixture-inverter/realtime'));
+  const reading = C.normalize(result.raw, PREF, NOW);
+  assert.equal(reading.loadPower, 1600); assert.equal(reading.loadVoltage, 227);
 });
 test('read-only allowlist rejects settings, arbitrary hosts, real-time triggers and every other write', () => {
   for (const [method, path] of [['POST','/api/v1/common/setting/S/set'], ['GET','/api/v1/inverter/S/shutdown'],

@@ -96,14 +96,14 @@ test('a stalled native request has a watchdog and cannot resume login on late ke
   assert.equal(encryptions,0);assert.equal(r.requests.length,1);assert.equal(r.Phone.store.get('token'),null);
   assert.ok(r.timers.every(t=>t.invalidated));
 });
-test('all widget sizes include source date/time, age, freshness threshold and real unavailable labels',()=>{
+test('all widget sizes compactly pair friendly cloud and fetch timestamps with their ages',()=>{
   const r=runtime();const now=Date.UTC(2026,9,21,12);
   const settings={utcOffsetMinutes:60};const state=r.Phone.demo(now);state.demo=false;state.reading.batteryVoltage=null;
   for(const size of ['small','medium','large']){
     const w=r.Phone.widget(state,{name:'SYNTHETIC INSTALLATION'},settings,size,now);
     const texts=strings(w).join('\n');
-    assert.ok(texts.includes('2026-10-21 12:58'));assert.ok(texts.includes('Stale after'));
-    assert.ok(texts.includes('Latest cloud snapshot'));assert.ok(texts.includes('Last fetched'));assert.equal(w.refreshAfterDate.getTime(),now+r.Core.POLL_MS);
+    assert.ok(texts.includes('Cloud 21 Oct, 12:58'));assert.ok(texts.includes('Fetch 21 Oct, 13:00'));
+    assert.equal(w.refreshAfterDate.getTime(),now+r.Core.POLL_MS);
     if(size!=='small')assert.ok(texts.includes('Unavailable'));
   }
 });
@@ -111,7 +111,7 @@ test('demo always visibly marked; no-source timestamp never uses fetch time as s
   const r=runtime();const state=r.Phone.demo(Date.now());
   assert.ok(strings(r.Phone.widget(state,null,{utcOffsetMinutes:60})).join(' ').includes('DEMO · NOT YOUR INSTALLATION'));
   state.demo=false;state.reading.sourceAt=null;
-  assert.ok(strings(r.Phone.widget(state,null,{utcOffsetMinutes:60})).join(' ').includes('Source time unavailable · AGE UNKNOWN'));
+  assert.ok(strings(r.Phone.widget(state,null,{utcOffsetMinutes:60})).join(' ').includes('Cloud timestamp unavailable'));
 });
 test('cache files contain only passed normalized envelope; backup restoration and account isolation',()=>{
   const r=runtime();const a=r.Phone.cache('account-A'),b=r.Phone.cache('account-B');

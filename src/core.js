@@ -75,6 +75,11 @@ const SolarCore = (() => {
     const power = pick("W", f.battPower, b.power);
     const gridPower = pick("W", f.gridOrMeterPower, g.pac);
     const soc = first(f.soc, b.soc);
+    // `existsThreeLoad` only tells us that the inverter can report a separate
+    // household total. It does not guarantee that this particular snapshot
+    // contains it, so preserve the ordinary Load/EPS value as a fallback.
+    const householdPower = pick("W", f.homeLoadPower);
+    const fallbackLoadPower = pick("W", f.loadOrEpsPower, l.pac);
     const gridVoltages = Array.isArray(g.vip) ? g.vip.map((x, i) => ({ label: `L${i + 1}`, value: quantity(x?.volt, "V") })) : [];
     const loadVoltage = pick("V", f.loadVoltage, f.loadVolt, f.loadV, l.voltage, l.loadVoltage, l.loadVolt, l.vip?.[0]?.volt);
     const pvRows = Array.isArray(p.pvIV) ? p.pvIV : raw.pvExtra?.pvIV;
@@ -104,9 +109,9 @@ const SolarCore = (() => {
       solarPower: pick("W", f.pvPower, p.pac), pvInputs,
       gridPower, gridDirection: direction(gridPower, f.gridTo, f.toGrid, preferences.gridPositive, "import", "export"),
       gridVoltages, gridAvailability: availability,
-      // For multi-load systems the web client uses homeLoadPower for household consumption.
-      loadPower: pick("W", bool(f.existsThreeLoad) === true ? f.homeLoadPower : f.loadOrEpsPower, l.pac),
-      loadLabel: bool(f.existsThreeLoad) === true ? "Household" : "Load / EPS",
+      // For multi-load systems the web client uses homeLoadPower when present.
+      loadPower: householdPower ?? fallbackLoadPower,
+      loadLabel: householdPower !== null ? "Household" : "Load / EPS",
       // Only explicit, voltage-shaped fields are used. Some accounts expose
       // no load/output voltage; that remains unavailable rather than inferred
       // from grid voltage.
@@ -278,7 +283,10 @@ const SolarCore = (() => {
         }
         catch (e) { if (["auth", "interactive", "crypto", "rate", "network"].includes(e.kind)) throw e; failures.push("pvExtra"); }
       }
-      if (pick("W", raw.flow?.loadOrEpsPower, raw.flow?.homeLoadPower) === null) {
+      // The flow endpoint usually supplies load power, but the documented
+      // load endpoint may be the only place with output/load voltage.
+      if (pick("W", raw.flow?.homeLoadPower, raw.flow?.loadOrEpsPower) === null ||
+          pick("V", raw.flow?.loadVoltage, raw.flow?.loadVolt, raw.flow?.loadV) === null) {
         try {
           const load = await this.get(`/api/v1/inverter/load/${sn}/realtime`, { sn: selection.sn, lan: "en" });
           if (!load || typeof load !== "object" || Array.isArray(load)) throw new Fault("protocol");
