@@ -276,12 +276,15 @@ const SolarPhone = (() => {
   }
   function freshness(w, r, settings, now, includeChecked) {
     if (!r.sourceAt) { text(w, "Source time unavailable · AGE UNKNOWN", 9, PALETTE.warning).lineLimit = 1; return; }
-    const row = w.addStack(); row.layoutHorizontally(); row.spacing = 4;
-    text(row, "Source " + clock(r.sourceAt, settings.utcOffsetMinutes, true), 9, PALETTE.muted);
-    text(row, "· Age", 9, PALETTE.muted);
-    const age = row.addDate(new Date(r.sourceAt)); age.applyRelativeStyle(); age.font = Font.systemFont(9); age.textColor = new Color(PALETTE.muted);
+    text(w, "Cloud source " + clock(r.sourceAt, settings.utcOffsetMinutes, true), 9, PALETTE.muted).lineLimit = 1;
+    const source = w.addStack(); source.layoutHorizontally(); source.spacing = 4;
+    text(source, r.ageUnknown ? "Known source age" : "Source age", 9, PALETTE.muted);
+    const sourceAge = source.addDate(new Date(r.sourceAt)); sourceAge.applyRelativeStyle(); sourceAge.font = Font.systemFont(9); sourceAge.textColor = new Color(PALETTE.muted);
+    const fetched = w.addStack(); fetched.layoutHorizontally(); fetched.spacing = 4;
+    text(fetched, "Last fetched", 9, PALETTE.muted);
+    const fetchedAge = fetched.addDate(new Date(r.fetchedAt)); fetchedAge.applyRelativeStyle(); fetchedAge.font = Font.systemFont(9); fetchedAge.textColor = new Color(PALETTE.bright);
     text(w, r.ageUnknown ? "Some source times missing · age uncertain" : "Stale after " + clock(r.sourceAt + SolarCore.STALE_MS, settings.utcOffsetMinutes), 8, PALETTE.warning).lineLimit = 1;
-    if (includeChecked) text(w, "Checked " + clock(r.fetchedAt, settings.utcOffsetMinutes) + " · iOS may defer the 1 min request", 8, PALETTE.muted).lineLimit = 1;
+    if (includeChecked) text(w, "Last fetch " + clock(r.fetchedAt, settings.utcOffsetMinutes, true) + " · iOS may defer the 1 min request", 8, PALETTE.muted).lineLimit = 1;
   }
   function widget(state, selected, settings, family = "large", now = Date.now()) {
     const w = new ListWidget(); w.setPadding(12, 12, 10, 12); w.spacing = 4;

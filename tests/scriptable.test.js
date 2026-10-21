@@ -103,7 +103,7 @@ test('all widget sizes include source date/time, age, freshness threshold and re
     const w=r.Phone.widget(state,{name:'SYNTHETIC INSTALLATION'},settings,size,now);
     const texts=strings(w).join('\n');
     assert.ok(texts.includes('2026-10-21 12:58'));assert.ok(texts.includes('Stale after'));
-    assert.ok(texts.includes('Age'));assert.equal(w.refreshAfterDate.getTime(),now+r.Core.POLL_MS);
+    assert.ok(texts.includes('Source age'));assert.ok(texts.includes('Last fetched'));assert.equal(w.refreshAfterDate.getTime(),now+r.Core.POLL_MS);
     if(size!=='small')assert.ok(texts.includes('Unavailable'));
   }
 });
