@@ -96,15 +96,16 @@ test('a stalled native request has a watchdog and cannot resume login on late ke
   assert.equal(encryptions,0);assert.equal(r.requests.length,1);assert.equal(r.Phone.store.get('token'),null);
   assert.ok(r.timers.every(t=>t.invalidated));
 });
-test('all widget sizes show separate friendly cloud and fetch timestamp lines with ages',()=>{
+test('all widget sizes show cloud and fetch ages together without static timestamps',()=>{
   const r=runtime();const now=Date.UTC(2026,9,21,12);
   const settings={utcOffsetMinutes:60};const state=r.Phone.demo(now);state.demo=false;state.reading.batteryVoltage=null;
   for(const size of ['small','medium','large']){
     const w=r.Phone.widget(state,{name:'SYNTHETIC INSTALLATION'},settings,size,now);
     const texts=strings(w).join('\n');
-    assert.ok(texts.includes('Cloud 21 Oct, 12:58'));assert.ok(texts.includes('Fetch 21 Oct, 13:00'));
+    assert.ok(texts.includes('Cloud '));assert.ok(texts.includes(' · Fetch '));
+    assert.ok(!texts.includes('21 Oct'));
     const directLines=w.items.filter(item=>item?.items).map(line=>line.items.filter(item=>item.value).map(item=>item.value).join(''));
-    assert.ok(directLines.some(line=>line.startsWith('Cloud ')));assert.ok(directLines.some(line=>line.startsWith('Fetch ')));
+    assert.ok(directLines.some(line=>line.startsWith('Cloud ') && line.includes('Fetch ')));
     assert.equal(w.refreshAfterDate.getTime(),now+r.Core.POLL_MS);
     if(size!=='small')assert.ok(texts.includes('Unavailable'));
   }
@@ -113,7 +114,7 @@ test('demo always visibly marked; no-source timestamp never uses fetch time as s
   const r=runtime();const state=r.Phone.demo(Date.now());
   assert.ok(strings(r.Phone.widget(state,null,{utcOffsetMinutes:60})).join(' ').includes('DEMO · NOT YOUR INSTALLATION'));
   state.demo=false;state.reading.sourceAt=null;
-  assert.ok(strings(r.Phone.widget(state,null,{utcOffsetMinutes:60})).join(' ').includes('Cloud timestamp unavailable'));
+  assert.ok(strings(r.Phone.widget(state,null,{utcOffsetMinutes:60})).join(' ').includes('Cloud age unavailable'));
 });
 test('cache files contain only passed normalized envelope; backup restoration and account isolation',()=>{
   const r=runtime();const a=r.Phone.cache('account-A'),b=r.Phone.cache('account-B');
