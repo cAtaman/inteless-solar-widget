@@ -12,6 +12,8 @@ if [[ ! -f "$source" ]]; then
   exit 1
 fi
 
+cp "$root/README.md" "$dist/README.md"
+
 if command -v sha256sum >/dev/null; then
   sha256sum "$source" | sed "s|  $source$|  $artifact|" > "$dist/$artifact.sha256"
 else

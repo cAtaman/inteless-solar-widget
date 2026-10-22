@@ -4,6 +4,7 @@ GitHub releases are the distributable source of truth. Every published release r
 
 - `Inteless-Solar.js` — the installable Scriptable script.
 - `Inteless-Solar.js.sha256` — an integrity checksum.
+- `README.md` — the setup, feature, and usage guide from the release tag.
 - `scriptable-gallery-submission.md` — title, description, and submission metadata.
 
 ## Create a release
