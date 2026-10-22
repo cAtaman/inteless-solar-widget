@@ -6,6 +6,8 @@ GitHub releases are the distributable source of truth. Pushing a release tag run
 - `Inteless-Solar.js.sha256` — an integrity checksum.
 - `README.md` — the setup, feature, and usage guide from the release tag.
 
+Release notes list the non-release commit subjects since the preceding tag, followed by a Full Changelog comparison link.
+
 ## Create a release
 
 1. Change the canonical version in `package.json` using `npm run version:patch`, `npm run version:minor`, or `npm run version:major`.
