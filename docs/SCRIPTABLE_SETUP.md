@@ -2,7 +2,7 @@
 
 This package contains the **JavaScript Scriptable widget only**. It runs directly in Scriptable; no companion runtime or server is required.
 
-Target: the owner's iPhone 12 / iOS 27. Account and background compatibility must be checked locally.
+Minimum supported platform: iPhone running iOS 15.5 or later, matching Scriptable's current App Store requirement. Account and background compatibility must be checked locally.
 
 1. Install the official **Scriptable** app by Simon B. Støvring from the App Store.
 2. Transfer **Inteless Solar.js** to the iPhone. Import/open it with Scriptable from Files if offered. Otherwise create a new Scriptable script, paste the complete file contents, and name it **Inteless Solar**.

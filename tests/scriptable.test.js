@@ -33,7 +33,7 @@ function runtime(options = {}) {
     FileManager:{local:()=>fm},Request,ListWidget:Stack,Color:class {constructor(value){this.value=value;}},Font:{systemFont:()=>({}),semiboldSystemFont:()=>({})},
     Script:{name:()=> 'Inteless Solar',setShortcutOutput(value){shortcut.output=value;}},Speech:{async speak(value){shortcut.spoken=value;}},
     args:{widgetParameter:options.widgetParameter || '',shortcutParameter:options.shortcutParameter},config:{runsInWidget:false,runsWithSiri:false,widgetFamily:'large'},
-    Device:{model:()=> 'MOCK iPhone',systemVersion:()=> '27.0 MOCK',isUsingDarkAppearance:()=>options.dark !== false}, Size:class {constructor(width,height){this.width=width;this.height=height;}},
+    Device:{model:()=> 'MOCK iPhone',systemVersion:()=> '15.5 MOCK',isUsingDarkAppearance:()=>options.dark !== false}, Size:class {constructor(width,height){this.width=width;this.height=height;}},
     Point:class {constructor(x,y){this.x=x;this.y=y;}}, Rect:class {constructor(x,y,width,height){Object.assign(this,{x,y,width,height});}},
     Path:class {move(){} addLine(){}}, DrawContext:class {setFillColor(){} fillRect(){} setStrokeColor(){} setLineWidth(){} addPath(){} strokePath(){} setFont(){} setTextColor(){} drawTextInRect(){} getImage(){return {synthetic:true};}},
     Timer:{schedule(ms,repeats,callback){const timer={ms,repeats,invalidated:false,

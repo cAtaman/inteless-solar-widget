@@ -2,6 +2,8 @@
 
 A read-only [Scriptable](https://scriptable.app/) Home Screen widget and Siri Shortcut for an authorized `pv.inteless.com` account. It runs directly on the iPhone and stores local credentials and tokens in Scriptable Keychain.
 
+Requires iOS 15.5 or later, which is Scriptable's current App Store minimum.
+
 The release-built installable file is [Inteless-Solar.js](https://github.com/cAtaman/inteless-solar-widget/releases/latest/download/Inteless-Solar.js). It shows battery, solar, household/load, and grid readings, source/fetch ages, and a large-widget local trend chart. It never changes inverter settings.
 
 ## Install
