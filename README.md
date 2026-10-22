@@ -14,7 +14,7 @@ The release-built installable file is [Inteless-Solar.js](https://github.com/cAt
 4. Add a Scriptable widget and choose **Inteless Solar**. A large widget includes the trend chart.
 5. Optional: create a Shortcut with Scriptable's **Run Script** action, choose **Inteless Solar**, and use a phrase such as “Solar status.” Siri will speak the current summary and return structured values to Shortcuts.
 
-See [Scriptable setup](docs/SCRIPTABLE_SETUP.md) for device setup, multiple-device parameters, freshness behavior, Siri requests, and troubleshooting. See [releasing and distribution](docs/RELEASING.md) for GitHub release assets, Gallery submission, and safe updates.
+See [Scriptable setup](docs/SCRIPTABLE_SETUP.md) for device setup, multiple-device parameters, freshness behavior, Siri requests, and troubleshooting. See [releasing and distribution](docs/RELEASING.md) for GitHub release assets and safe updates.
 
 ## Develop
 
@@ -32,4 +32,4 @@ The `version` in [package.json](package.json) is the canonical widget version. E
 
 ## GitHub releases
 
-Pushing a matching semantic Git tag runs CI, builds the single-file widget, creates the GitHub Release, and attaches the installable JavaScript file, SHA-256 checksum, this README, and Gallery-submission metadata. The Gallery has no documented publication API, so its curated submission is manual. Details: [releasing and distribution](docs/RELEASING.md).
+Pushing a matching semantic Git tag runs CI, builds the single-file widget, creates the GitHub Release, and attaches the installable JavaScript file, SHA-256 checksum, and this README. Details: [releasing and distribution](docs/RELEASING.md).

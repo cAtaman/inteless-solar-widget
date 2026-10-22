@@ -5,7 +5,6 @@ GitHub releases are the distributable source of truth. Pushing a release tag run
 - `Inteless-Solar.js` — the installable Scriptable script.
 - `Inteless-Solar.js.sha256` — an integrity checksum.
 - `README.md` — the setup, feature, and usage guide from the release tag.
-- `scriptable-gallery-submission.md` — title, description, and submission metadata.
 
 ## Create a release
 
@@ -21,10 +20,6 @@ git push origin v1.2.0
 ```
 
 For a local release-package check, run `npm run package:release`. It writes files to ignored `dist/`.
-
-## Scriptable Gallery
-
-The Scriptable Gallery is curated. There is no documented Gallery upload API, so no safe CI job can publish directly to it. After a GitHub release is published, submit its `Inteless-Solar.js` asset and the generated Gallery metadata through the Gallery's current contributor process. Do not include account data, credentials, tokens, serial numbers, or live readings.
 
 ## iPhone installation and updates
 
