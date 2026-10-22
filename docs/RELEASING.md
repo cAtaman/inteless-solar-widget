@@ -1,6 +1,6 @@
 # Releases and distribution
 
-GitHub releases are the distributable source of truth. Every published release runs the `Package release` workflow, which verifies the tag, builds the single-file widget, runs tests, and attaches these assets:
+GitHub releases are the distributable source of truth. Pushing a release tag runs the `Publish release` workflow, which verifies the tag, builds the single-file widget, runs tests, creates the GitHub Release, and attaches these assets:
 
 - `Inteless-Solar.js` — the installable Scriptable script.
 - `Inteless-Solar.js.sha256` — an integrity checksum.
@@ -11,8 +11,14 @@ GitHub releases are the distributable source of truth. Every published release r
 
 1. Change the canonical version in `package.json` using `npm run version:patch`, `npm run version:minor`, or `npm run version:major`.
 2. Run `npm run check` and install the generated script on an iPhone for an authorized-account check.
-3. Commit the source, push the commit, and create an annotated tag named exactly `v` plus `package.json`'s version. For example, version `1.2.0` requires tag `v1.2.0`. GitHub release CI builds the installable script from that tag.
-4. Publish the matching GitHub release. The workflow uploads the assets to that release.
+3. Commit the source and push it. Create an annotated tag named exactly `v` plus `package.json`'s version. For example, version `1.2.0` requires tag `v1.2.0`.
+4. Push that tag. The workflow creates the matching GitHub Release and uploads the assets automatically. No browser upload or GitHub Release form is needed.
+
+```sh
+git push origin main
+git tag -a v1.2.0 -m "Release v1.2.0"
+git push origin v1.2.0
+```
 
 For a local release-package check, run `npm run package:release`. It writes files to ignored `dist/`.
 

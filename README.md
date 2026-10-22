@@ -32,4 +32,4 @@ The `version` in [package.json](package.json) is the canonical widget version. E
 
 ## GitHub releases
 
-Publishing a matching semantic GitHub release runs CI, builds the single-file widget, and attaches the installable JavaScript file, SHA-256 checksum, this README, and Gallery-submission metadata. The Gallery has no documented publication API, so its curated submission is manual. Details: [releasing and distribution](docs/RELEASING.md).
+Pushing a matching semantic Git tag runs CI, builds the single-file widget, creates the GitHub Release, and attaches the installable JavaScript file, SHA-256 checksum, this README, and Gallery-submission metadata. The Gallery has no documented publication API, so its curated submission is manual. Details: [releasing and distribution](docs/RELEASING.md).

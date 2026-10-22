@@ -1,8 +1,8 @@
-name: Package release
+name: Publish release
 
 on:
-  release:
-    types: [published]
+  push:
+    tags: ["v*"]
 
 permissions:
   contents: write
@@ -13,15 +13,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.release.tag_name }}
+          ref: ${{ github.ref }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
       - run: npm run check
-      - run: bash scripts/verify-release-version.sh "${{ github.event.release.tag_name }}"
+      - run: bash scripts/verify-release-version.sh "${{ github.ref_name }}"
       - run: npm run package:release
-      - name: Upload installable Scriptable assets
+      - name: Create or update GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.event.release.tag_name }}
-        run: gh release upload "$TAG" dist/* --clobber
+        run: bash scripts/publish-release.sh "${{ github.ref_name }}"
