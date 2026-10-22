@@ -13,6 +13,6 @@
     "version:major": "npm version major --no-git-tag-version && npm run build"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=24.22.1"
   }
 }

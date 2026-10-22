@@ -4,7 +4,7 @@ Thanks for helping improve this Scriptable widget. It accesses an authorized `pv
 
 ## Local workflow
 
-1. Use Node.js 20 or newer. The project has no package dependencies.
+1. Use Node.js 24.22.1 or newer. The project has no package dependencies.
 2. Make changes in `src/`; it is the only committed widget implementation.
 3. Run `npm run check`. It rebuilds `dist/Inteless-Solar.js` and runs the synthetic unit tests.
 4. Review the generated release artifact locally, then commit source and relevant tests together. Do not commit `dist/`.

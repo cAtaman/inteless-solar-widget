@@ -16,7 +16,7 @@ jobs:
           ref: ${{ github.ref }}
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24.22.1
       - run: npm run check
       - run: bash scripts/verify-release-version.sh "${{ github.ref_name }}"
       - run: npm run package:release

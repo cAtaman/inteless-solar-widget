@@ -18,7 +18,7 @@ See [Scriptable setup](docs/SCRIPTABLE_SETUP.md) for device setup, multiple-devi
 
 ## Develop
 
-Requires Node 20 or newer. There are no npm dependencies.
+Requires Node 24.22.1 or newer. There are no npm dependencies.
 
 ```sh
 npm run check
