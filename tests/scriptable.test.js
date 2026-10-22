@@ -7,7 +7,7 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 
 function runtime(options = {}) {
-  const keys=new Map(),files=new Map(),requests=[],timers=[],webviews=[];
+  const keys=new Map(),files=new Map(),requests=[],timers=[],webviews=[],shortcut={};
   class Stack {
     constructor(){this.items=[];}
     addText(value){const x={value:String(value)};this.items.push(x);return x;}
@@ -31,7 +31,9 @@ function runtime(options = {}) {
     remove:p=>{for(const key of files.keys())if(key===p||key.startsWith(p+'/'))files.delete(key);}};
   const env={Keychain:{contains:k=>keys.has(k),get:k=>keys.get(k),set:(k,v)=>keys.set(k,v),remove:k=>keys.delete(k)},
     FileManager:{local:()=>fm},Request,ListWidget:Stack,Color:class {constructor(value){this.value=value;}},Font:{systemFont:()=>({}),semiboldSystemFont:()=>({})},
-    Script:{name:()=> 'Inteless Solar'},Device:{model:()=> 'MOCK iPhone',systemVersion:()=> '27.0 MOCK',isUsingDarkAppearance:()=>options.dark !== false}, Size:class {constructor(width,height){this.width=width;this.height=height;}},
+    Script:{name:()=> 'Inteless Solar',setShortcutOutput(value){shortcut.output=value;}},Speech:{async speak(value){shortcut.spoken=value;}},
+    args:{widgetParameter:options.widgetParameter || '',shortcutParameter:options.shortcutParameter},config:{runsInWidget:false,runsWithSiri:false,widgetFamily:'large'},
+    Device:{model:()=> 'MOCK iPhone',systemVersion:()=> '27.0 MOCK',isUsingDarkAppearance:()=>options.dark !== false}, Size:class {constructor(width,height){this.width=width;this.height=height;}},
     Point:class {constructor(x,y){this.x=x;this.y=y;}}, Rect:class {constructor(x,y,width,height){Object.assign(this,{x,y,width,height});}},
     Path:class {move(){} addLine(){}}, DrawContext:class {setFillColor(){} fillRect(){} setStrokeColor(){} setLineWidth(){} addPath(){} strokePath(){} setFont(){} setTextColor(){} drawTextInRect(){} getImage(){return {synthetic:true};}},
     Timer:{schedule(ms,repeats,callback){const timer={ms,repeats,invalidated:false,
@@ -52,7 +54,7 @@ function runtime(options = {}) {
   vm.createContext(env);
   for(const name of ['core','crypto','scriptable'])vm.runInContext(fs.readFileSync(`${__dirname}/../src/${name}.js`,'utf8'),env);
   vm.runInContext('this.Phone=SolarPhone;this.Core=SolarCore;',env);
-  return { ...env, keys, files, requests, timers, webviews };
+  return { ...env, keys, files, requests, timers, webviews, shortcut };
 }
 function strings(w){return w.items.flatMap(x=>x instanceof Object && x.items?strings(x):x.value?[x.value]:[]);}
 test('built Scriptable artifact declares the canonical semantic version',()=>{
@@ -145,6 +147,28 @@ test('demo always visibly marked; no-source timestamp never uses fetch time as s
   assert.ok(strings(r.Phone.widget(state,null,{utcOffsetMinutes:60})).join(' ').includes('DEMO · NOT YOUR INSTALLATION'));
   state.demo=false;state.reading.sourceAt=null;
   assert.ok(strings(r.Phone.widget(state,null,{utcOffsetMinutes:60})).join(' ').includes('Cloud age unavailable'));
+});
+test('Siri report speaks current metrics, reports both ages, and returns shortcut-safe values',()=>{
+  const r=runtime(), now=Date.UTC(2026,9,21,12), state=r.Phone.demo(now);state.demo=false;
+  const report=r.Phone.siriReport(state,{plantName:'SYNTHETIC PLANT'},{utcOffsetMinutes:60},{metric:'summary'},now);
+  assert.match(report.speech,/Battery is 76 percent/);assert.match(report.speech,/Solar generation is 3.10 kilowatts/);
+  assert.match(report.speech,/Cloud snapshot 2 minutes ago; fetched just now/);
+  assert.equal(report.output.available,true);assert.equal(report.output.stale,false);assert.equal(report.output.battery_soc_percent,76);
+  assert.equal(report.output.pv_input_voltages[0].volts,320);
+});
+test('Siri request accepts metric/device selection and makes cached cloud failures explicit',()=>{
+  const r=runtime(), now=Date.UTC(2026,9,21,12), state=r.Phone.demo(now);state.demo=false;state.cached=true;state.error='network';
+  assert.deepEqual(JSON.parse(JSON.stringify(r.Phone.siriRequest({metric:'GRID',device:'plant:inverter'}))),{metric:'grid',device:'plant:inverter'});
+  assert.deepEqual(JSON.parse(JSON.stringify(r.Phone.siriRequest('unknown'))),{metric:'summary',device:''});
+  const report=r.Phone.siriReport(state,null,{utcOffsetMinutes:60},{metric:'grid'},now);
+  assert.match(report.speech,/Cached data\. Latest cloud request failed: network\./);assert.match(report.speech,/Grid power is/);
+  assert.equal(report.output.stale,true);assert.equal(report.output.error,'network');
+});
+test('Siri execution returns a safe shortcut response without opening local setup',async()=>{
+  const r=runtime();r.config.runsWithSiri=true;
+  await r.Phone.main();
+  assert.match(r.shortcut.spoken,/needs local setup in Scriptable/);
+  assert.equal(r.shortcut.output.available,false);
 });
 test('cache files contain only passed normalized envelope; backup restoration and account isolation',()=>{
   const r=runtime();const a=r.Phone.cache('account-A'),b=r.Phone.cache('account-B');

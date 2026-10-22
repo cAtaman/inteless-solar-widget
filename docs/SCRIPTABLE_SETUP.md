@@ -23,6 +23,16 @@ Offline/network/login failures retain the last successful readings with their or
 
 The parameter **`demo`** displays clearly labeled synthetic data. It is never substituted for failed live readings.
 
+## Siri and Shortcuts
+
+1. In Shortcuts, add Scriptable's **Run Script** action and choose **Inteless Solar**.
+2. Name the Shortcut with a phrase such as **Solar status**, then invoke it with Siri.
+3. The script speaks a concise summary and returns a dictionary that later Shortcut actions can use. The dictionary includes the six primary readings, available PV-input voltages, cloud source/fetch timestamps, and whether the result is cached or stale.
+
+The optional Shortcut input can be a word such as `summary`, `battery`, `solar`, `load`, or `grid`. A dictionary input can use `metric` with one of those values and `device` with a previously selected `plantId:inverterSerial` value. A missing or unrecognized value uses the default selected inverter. Setup, sign-in, and plant selection must happen in the Scriptable app; Siri never opens credential prompts.
+
+Siri reports cloud-source age separately from fetch age. If cloud access fails, it says that it is using cached data and includes the failure category. It never speaks credentials, tokens, or device serial numbers.
+
 The automated desktop tests use synthetic data and Scriptable API mocks. Validate the actual account readings and background behavior from the installed widget. If background secure crypto consistently fails while foreground crypto succeeds, native SwiftUI/WidgetKit is the fallback.
 
 **Forget account and cached data** removes this script's stored credentials, tokens, selections and telemetry cache from Scriptable. No inverter settings are changed by this implementation.

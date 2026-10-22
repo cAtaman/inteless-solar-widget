@@ -194,6 +194,59 @@ const SolarPhone = (() => {
   function voltages(values) {
     return values.length ? values.map(x => `${x.label} ${SolarCore.valueText(x.value, " V")}`).join(" · ") : "Unavailable";
   }
+  function ageText(ms, now = Date.now()) {
+    if (!Number.isFinite(ms)) return "unavailable";
+    const seconds = Math.max(0, Math.round((now - ms) / 1000));
+    if (seconds < 10) return "just now";
+    if (seconds < 60) return `${seconds} seconds ago`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 48) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+    const days = Math.floor(hours / 24);
+    return `${days} day${days === 1 ? "" : "s"} ago`;
+  }
+  function siriRequest(value) {
+    const metrics = new Set(["summary", "battery", "solar", "load", "grid"]);
+    const raw = value && typeof value === "object" && !Array.isArray(value) ? value : { metric: value };
+    const metric = String(raw.metric || "summary").trim().toLowerCase();
+    const device = typeof raw.device === "string" ? raw.device.trim() : "";
+    return { metric: metrics.has(metric) ? metric : "summary", device };
+  }
+  function spokenValue(value, unit, decimals = 0) {
+    return value === null || !Number.isFinite(value) ? "unavailable" : `${value.toFixed(decimals)} ${unit}`;
+  }
+  function spokenPower(value, direction = "") {
+    if (value === null || !Number.isFinite(value)) return "unavailable";
+    const magnitude = SolarCore.powerText(value, true).replace(" kW", " kilowatts").replace(" W", " watts");
+    return direction && direction !== "unavailable" ? `${magnitude}, ${direction}` : magnitude;
+  }
+  function siriReport(state, selected, settings, request = {}, now = Date.now()) {
+    const r = state.reading;
+    const metric = request.metric || "summary";
+    const context = { metric, plant: selected?.plantName || null, cached: Boolean(state.cached), error: state.error || null,
+      status: SolarCore.status(r, now, state.error, state.cached), source_at: r?.sourceAt || null, fetched_at: r?.fetchedAt || null,
+      source_age_seconds: r?.sourceAt ? Math.max(0, Math.round((now - r.sourceAt) / 1000)) : null,
+      fetched_age_seconds: r?.fetchedAt ? Math.max(0, Math.round((now - r.fetchedAt) / 1000)) : null };
+    if (!r) {
+      return { speech: state.setup ? "Inteless Solar needs local setup in Scriptable before Siri can report readings." : "Inteless Solar readings are unavailable.",
+        output: { ...context, available: false } };
+    }
+    const values = { battery_soc_percent: r.batterySoc, battery_voltage_volts: r.batteryVoltage, battery_power_watts: r.batteryPower,
+      battery_direction: r.batteryDirection, pv_power_watts: r.solarPower, load_power_watts: r.loadPower, load_voltage_volts: r.loadVoltage,
+      grid_power_watts: r.gridPower, grid_voltage_volts: primaryVoltage(r.gridVoltages), grid_direction: r.gridDirection,
+      grid_availability: r.gridAvailability, today_solar_kwh: SolarCore.todayValue(r, now, settings.utcOffsetMinutes),
+      pv_input_voltages: r.pvInputs.map(x => ({ input: x.label, volts: x.value })) };
+    const battery = `Battery is ${spokenValue(r.batterySoc, "percent")} at ${spokenValue(r.batteryVoltage, "volts", 1)}. Battery power is ${spokenPower(r.batteryPower, r.batteryDirection)}.`;
+    const solar = `Solar generation is ${spokenPower(r.solarPower)}. Today's solar production is ${spokenValue(SolarCore.todayValue(r, now, settings.utcOffsetMinutes), "kilowatt hours", 2)}. PV inputs are ${r.pvInputs.length ? r.pvInputs.map(x => `${x.label} ${spokenValue(x.value, "volts", 1)}`).join(", ") : "unavailable"}.`;
+    const load = `${r.loadLabel} power is ${spokenPower(r.loadPower)}. Load voltage is ${spokenValue(r.loadVoltage, "volts", 1)}.`;
+    const grid = `Grid power is ${spokenPower(r.gridPower, r.gridDirection)}. Grid voltage is ${spokenValue(primaryVoltage(r.gridVoltages), "volts", 1)} and grid availability is ${r.gridAvailability}.`;
+    const detail = ({ battery, solar, load, grid })[metric] || `${battery} ${solar} ${load} ${grid}`;
+    const freshness = `Cloud snapshot ${r.sourceAt ? ageText(r.sourceAt, now) : "age unavailable"}; fetched ${ageText(r.fetchedAt, now)}.`;
+    const stale = state.cached || SolarCore.status(r, now, state.error, state.cached).startsWith("STALE") || Boolean(state.error);
+    const prefix = state.demo ? "Demo data. " : stale ? `Cached data. ${state.error ? `Latest cloud request failed: ${state.error}. ` : ""}` : "";
+    return { speech: `${prefix}${detail} ${freshness}`, output: { ...context, ...values, available: true, stale } };
+  }
   function demo(now) {
     const time = new Date(now - 120000).toISOString();
     return { demo: true, cached: false, reading: SolarCore.normalize({
@@ -421,9 +474,20 @@ const SolarPhone = (() => {
     w.refreshAfterDate = new Date(Date.now() + 3600000);
     return w;
   }
+  async function siri(settings) {
+    deadline = Date.now() + 20000;
+    const request = siriRequest(args.shortcutParameter);
+    const selected = settings ? selection(settings, request.device) || settings.selection : null;
+    const state = selected ? await getState(settings, selected) : { setup: true, error: "auth" };
+    const report = siriReport(state, selected, settings || DEFAULTS, request);
+    if (typeof Script.setShortcutOutput === "function") Script.setShortcutOutput(report.output);
+    try { if (typeof Speech !== "undefined" && typeof Speech.speak === "function") await Speech.speak(report.speech); }
+    catch (_) { /* Shortcut output remains useful if speech is unavailable. */ }
+  }
   async function main() {
     const parameter = String(args.widgetParameter || "").trim();
     let settings = store.get("settings");
+    if (config.runsWithSiri) { await siri(settings); return; }
     if (config.runsInWidget) {
       deadline = Date.now() + 20000;
       if (parameter === "probe") { Script.setWidget(await backgroundProbe()); return; }
@@ -465,7 +529,7 @@ const SolarPhone = (() => {
     if (action === 3) await diagnostics(state, selected, settings);
     else await widget(state, selected, settings).presentLarge();
   }
-  return { main, widget, demo, transport, encrypt, selection, clock, voltages, cache, store, history, cleanedHistory, chart, version: VERSION };
+  return { main, widget, demo, transport, encrypt, selection, clock, voltages, ageText, siriRequest, siriReport, cache, store, history, cleanedHistory, chart, version: VERSION };
 })();
 async function runSolarWidget() {
   try { await SolarPhone.main(); }
