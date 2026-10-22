@@ -10,7 +10,7 @@ GitHub releases are the distributable source of truth. Every published release r
 
 1. Change the canonical version in `package.json` using `npm run version:patch`, `npm run version:minor`, or `npm run version:major`.
 2. Run `npm run check` and install the generated script on an iPhone for an authorized-account check.
-3. Commit the source and generated `scriptable/Inteless Solar.js`, push the commit, and create an annotated tag named exactly `v` plus `package.json`'s version. For example, version `1.2.0` requires tag `v1.2.0`.
+3. Commit the source, push the commit, and create an annotated tag named exactly `v` plus `package.json`'s version. For example, version `1.2.0` requires tag `v1.2.0`. GitHub release CI builds the installable script from that tag.
 4. Publish the matching GitHub release. The workflow uploads the assets to that release.
 
 For a local release-package check, run `npm run package:release`. It writes files to ignored `dist/`.

@@ -2,12 +2,12 @@
 
 A read-only [Scriptable](https://scriptable.app/) Home Screen widget and Siri Shortcut for an authorized `pv.inteless.com` account. It runs directly on the iPhone and stores local credentials and tokens in Scriptable Keychain.
 
-The single installable file is [scriptable/Inteless Solar.js](scriptable/Inteless%20Solar.js). It shows battery, solar, household/load, and grid readings, source/fetch ages, and a large-widget local trend chart. It never changes inverter settings.
+The release-built installable file is [Inteless-Solar.js](https://github.com/cAtaman/inteless-solar-widget/releases/latest/download/Inteless-Solar.js). It shows battery, solar, household/load, and grid readings, source/fetch ages, and a large-widget local trend chart. It never changes inverter settings.
 
 ## Install
 
 1. Install Scriptable on the iPhone.
-2. Import [Inteless Solar.js](scriptable/Inteless%20Solar.js) and run it.
+2. Download and import [Inteless-Solar.js](https://github.com/cAtaman/inteless-solar-widget/releases/latest/download/Inteless-Solar.js), then run it.
 3. Use **Sign in / change account** to enter credentials locally, then select a plant and inverter.
 4. Add a Scriptable widget and choose **Inteless Solar**. A large widget includes the trend chart.
 5. Optional: create a Shortcut with Scriptable's **Run Script** action, choose **Inteless Solar**, and use a phrase such as “Solar status.” Siri will speak the current summary and return structured values to Shortcuts.
@@ -22,7 +22,7 @@ Requires Node 20 or newer. There are no npm dependencies.
 npm run check
 ```
 
-Edit files in `src/`, then run `npm run build` to regenerate the committed Scriptable file.
+Edit files in `src/`, then run `npm run build` to generate `dist/Inteless-Solar.js` locally. The generated file is not committed; GitHub release CI builds and publishes it.
 
 ## Versions
 

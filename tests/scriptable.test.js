@@ -59,7 +59,7 @@ function runtime(options = {}) {
 function strings(w){return w.items.flatMap(x=>x instanceof Object && x.items?strings(x):x.value?[x.value]:[]);}
 test('built Scriptable artifact declares the canonical semantic version',()=>{
   const root=path.join(__dirname,'..'), version=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version;
-  const artifact=fs.readFileSync(path.join(root,'scriptable','Inteless Solar.js'),'utf8');
+  const artifact=fs.readFileSync(path.join(root,'dist','Inteless-Solar.js'),'utf8');
   assert.ok(artifact.startsWith('// Variables used by Scriptable.'));
   assert.ok(artifact.includes(`// Version: ${version}\n`));
   assert.ok(artifact.includes(`const SOLAR_WIDGET_VERSION = "${version}";`));

@@ -5,9 +5,9 @@ Thanks for helping improve this Scriptable widget. It accesses an authorized `pv
 ## Local workflow
 
 1. Use Node.js 20 or newer. The project has no package dependencies.
-2. Make changes in `src/`, not directly in `scriptable/Inteless Solar.js`.
-3. Run `npm run check`. It rebuilds the installable script and runs the synthetic unit tests.
-4. Review the generated `scriptable/Inteless Solar.js` diff and commit source, generated artifact, and relevant tests together.
+2. Make changes in `src/`; it is the only committed widget implementation.
+3. Run `npm run check`. It rebuilds `dist/Inteless-Solar.js` and runs the synthetic unit tests.
+4. Review the generated release artifact locally, then commit source and relevant tests together. Do not commit `dist/`.
 
 For a release candidate, update the semantic version in `package.json`, run `npm run package:release`, and test the release asset on a device with a separate authorized account. Do not commit `dist/`.
 
@@ -21,4 +21,4 @@ For a release candidate, update the semantic version in `package.json`, run `npm
 
 ## Pull requests
 
-Describe the user-visible behavior, test command and result, and any device validation. Keep the Scriptable artifact synchronized with its sources. Changes that affect authentication, endpoint paths, field names, units, timestamp interpretation, or power directions need focused synthetic coverage and should be validated against a contributor's own authorized account before release.
+Describe the user-visible behavior, test command and result, and any device validation. Changes that affect authentication, endpoint paths, field names, units, timestamp interpretation, or power directions need focused synthetic coverage and should be validated against a contributor's own authorized account before release.

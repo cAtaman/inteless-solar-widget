@@ -1,11 +1,11 @@
 # Inteless Solar Widget
 
-This repository builds one read-only JavaScript widget for the Scriptable iOS app. The committed installable artifact is `scriptable/Inteless Solar.js`; its editable source is in `src/`.
+This repository builds one read-only JavaScript widget for the Scriptable iOS app. Its editable source is in `src/`; release CI generates the installable `dist/Inteless-Solar.js` artifact.
 
 ## Development
 
 - Use Node.js 20 or newer and run `npm run check` before committing.
-- Edit `src/core.js`, `src/crypto.js`, or `src/scriptable.js`, then run `npm run build` to regenerate the committed Scriptable artifact.
+- Edit `src/core.js`, `src/crypto.js`, or `src/scriptable.js`, then run `npm run build` to regenerate the ignored Scriptable artifact in `dist/`.
 - Keep the runtime dependency-free. The build and release scripts use only Node's standard library.
 - Keep changes small and commit them atomically. Do not add Codex, Anthropic, or generated-by footers as commit co-authors.
 

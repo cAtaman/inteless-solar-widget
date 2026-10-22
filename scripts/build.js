@@ -5,5 +5,7 @@ const { version } = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 
 const parts = ['core', 'crypto', 'scriptable'].map(name => fs.readFileSync(path.join(root, 'src', name + '.js'), 'utf8').replace(/^if \(typeof module !== "undefined"\) module.exports = .*;$/gm, ''));
 const header = `// Variables used by Scriptable.\n// icon-color: deep-green; icon-glyph: solar-panel;\n// Inteless Solar — install this single file in Scriptable.\n// Version: ${version}\n// Credentials are entered locally and stored in Scriptable Keychain.\n`;
 const buildInfo = `const SOLAR_WIDGET_VERSION = ${JSON.stringify(version)};\n`;
-fs.writeFileSync(path.join(root, 'scriptable', 'Inteless Solar.js'), header + buildInfo + parts.join('\n') + '\nawait runSolarWidget();\n');
-console.log(`Built scriptable/Inteless Solar.js v${version}`);
+const dist = path.join(root, 'dist');
+fs.mkdirSync(dist, { recursive: true });
+fs.writeFileSync(path.join(dist, 'Inteless-Solar.js'), header + buildInfo + parts.join('\n') + '\nawait runSolarWidget();\n');
+console.log(`Built dist/Inteless-Solar.js v${version}`);
