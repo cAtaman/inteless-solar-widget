@@ -18,7 +18,7 @@ jobs:
         with:
           node-version: 22
       - run: npm run check
-      - run: node scripts/verify-release-version.js "${{ github.event.release.tag_name }}"
+      - run: bash scripts/verify-release-version.sh "${{ github.event.release.tag_name }}"
       - run: npm run package:release
       - name: Upload installable Scriptable assets
         env:

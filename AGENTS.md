@@ -6,7 +6,7 @@ This repository builds one read-only JavaScript widget for the Scriptable iOS ap
 
 - Use Node.js 20 or newer and run `npm run check` before committing.
 - Edit `src/core.js`, `src/crypto.js`, or `src/scriptable.js`, then run `npm run build` to regenerate the ignored Scriptable artifact in `dist/`.
-- Keep the runtime dependency-free. The build and release scripts use only Node's standard library.
+- Keep the runtime dependency-free. The Node build and Bash release scripts have no third-party dependencies.
 - Keep changes small and commit them atomically. Do not add Codex, Anthropic, or generated-by footers as commit co-authors.
 
 ## Security and data handling

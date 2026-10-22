@@ -7,7 +7,7 @@
     "build": "node scripts/build.js",
     "test": "node --test tests/*.test.js",
     "check": "npm run build && npm test",
-    "package:release": "npm run build && node scripts/package-release.js",
+    "package:release": "npm run build && bash scripts/package-release.sh",
     "version:patch": "npm version patch --no-git-tag-version && npm run build",
     "version:minor": "npm version minor --no-git-tag-version && npm run build",
     "version:major": "npm version major --no-git-tag-version && npm run build"
