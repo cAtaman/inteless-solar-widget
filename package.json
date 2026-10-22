@@ -1,6 +1,6 @@
 {
   "name": "inteless-scriptable-solar-widget",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "private": true,
   "description": "Read-only Inteless cloud solar widget for Scriptable on iPhone",
   "scripts": {
