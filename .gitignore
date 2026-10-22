@@ -1,11 +1,7 @@
 node_modules/
 .idea/
-__pycache__/
-*.py[cod]
 .DS_Store
 coverage/
 dist/
 *.local.json
 *.har
-.env*
-!.env.example
